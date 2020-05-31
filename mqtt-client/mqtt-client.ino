@@ -19,17 +19,19 @@
 */
 
 /* Simon:
-verwendete Bibliothek: PubSubClient  die Bibliothek hab ich �ber die Arduino-IDE installiert.
+verwendete Bibliothek: PubSubClient  die Bibliothek hab ich über die Arduino-IDE installiert.
 Anpassen muss man:
     wlan ssid und passwort
     IP das mqtt Server
 das verwendete topic lautet " /outTopic "; der Befehl auf dem Raspi: mosquitto_sub -d -t outTopic
-zum pr�fen, ob der NodeMCU sich mit dem wlan verbindet und etwas ausgibt, hilft der serielle Monitor
+zum prüfen, ob der NodeMCU sich mit dem wlan verbindet und etwas ausgibt, hilft der serielle Monitor
 */
 
-
-#include <ESP8266WiFi.h>
 #include <PubSubClient.h>
+
+#include <ESP8266WiFi.h> //Für ESP8266
+//#include <WiFi.h> //FÜR ESP32
+//#define BUILTIN_LED 2 //Für ESP32
 
 // Update these with values suitable for your network.
 
