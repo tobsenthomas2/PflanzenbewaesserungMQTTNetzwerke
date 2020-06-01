@@ -32,7 +32,7 @@ zum prüfen, ob der NodeMCU sich mit dem wlan verbindet und etwas ausgibt, hilft
 #include <ESP8266WiFi.h> //Für ESP8266
 //#include <WiFi.h> //FÜR ESP32
 //#define BUILTIN_LED 2 //Für ESP32
-
+//testtest
 // Update these with values suitable for your network.
 
 const char* ssid = " hier ssid einfuegen ";
