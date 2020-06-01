@@ -17,7 +17,10 @@ import paho.mqtt.publish as publish
 #MQTT_PATH = "test_channel"
 
 MQTT_SERVER = "localhost"
-MQTT_PATH = "test_channel"
+#MQTT_PATH = "test_channel"
+MQTT_PATH_COMMAND="command_channel"
+MQTT_PATH_EARTH_HUMIDITY="earth_humidity_channel"
+MINHUM=50
  
 # The callback for when the client receives a CONNACK response from the server.
 def on_connect(client, userdata, flags, rc):
@@ -25,19 +28,30 @@ def on_connect(client, userdata, flags, rc):
  
     # Subscribing in on_connect() means that if we lose the connection and
     # reconnect then subscriptions will be renewed.
-    client.subscribe(MQTT_PATH)
+    
+    #client.subscribe(MQTT_PATH)
+    client.subscribe(MQTT_PATH_EARTH_HUMIDITY)
+   
+   
  
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
+   
+    humidity = float (msg.payload)
     print(msg.topic+" "+str(msg.payload)) 
+    print(" humidity: "+str(humidity)) 
     # more callbacks, etc
-    if str(msg.payload) =="antworte":
+    if humidity <= MIMINHUM:
+        print(" humidity < 50. Pumpbefehl wird gesendet ") 
+        publish.single(MQTT_PATH_COMMAND, "pumpWater", hostname=MQTT_SERVER)
+    #if str(msg.payload) =="antworte":
         
-        publish.single(MQTT_PATH, "geantwortet und empfangen", hostname=MQTT_SERVER)
+     #   publish.single(MQTT_PATH, "geantwortet und empfangen", hostname=MQTT_SERVER)
  
 client = mqtt.Client()
 client.on_connect = on_connect
 client.on_message = on_message
+
  
 client.connect(MQTT_SERVER, 1883, 60)
  

@@ -11,6 +11,7 @@
     <OutputPath>.</OutputPath>
     <Name>Raspberry</Name>
     <RootNamespace>Raspberry</RootNamespace>
+    <InterpreterId>MSBuild|env|$(MSBuildProjectFullPath)</InterpreterId>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -21,7 +22,32 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="paho\mqtt\client.py" />
+    <Compile Include="paho\mqtt\matcher.py" />
+    <Compile Include="paho\mqtt\packettypes.py" />
+    <Compile Include="paho\mqtt\properties.py" />
+    <Compile Include="paho\mqtt\publish.py" />
+    <Compile Include="paho\mqtt\reasoncodes.py" />
+    <Compile Include="paho\mqtt\subscribe.py" />
+    <Compile Include="paho\mqtt\subscribeoptions.py" />
+    <Compile Include="paho\mqtt\__init__.py" />
+    <Compile Include="paho\__init__.py" />
     <Compile Include="Raspberry.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="paho\" />
+    <Folder Include="paho\mqtt\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Interpreter Include="env\">
+      <Id>env</Id>
+      <Version>2.7</Version>
+      <Description>env (Python 2.7 (64-bit))</Description>
+      <InterpreterPath>Scripts\python.exe</InterpreterPath>
+      <WindowsInterpreterPath>Scripts\pythonw.exe</WindowsInterpreterPath>
+      <PathEnvironmentVariable>PYTHONPATH</PathEnvironmentVariable>
+      <Architecture>X64</Architecture>
+    </Interpreter>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
