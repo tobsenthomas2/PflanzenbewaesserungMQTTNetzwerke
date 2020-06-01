@@ -28,16 +28,25 @@ zum prüfen, ob der NodeMCU sich mit dem wlan verbindet und etwas ausgibt, hilft
 */
 
 #include <PubSubClient.h>
-
-#include <ESP8266WiFi.h> //Für ESP8266
-//#include <WiFi.h> //FÜR ESP32
-//#define BUILTIN_LED 2 //Für ESP32
-//testtest
+//ADC
+#include "driver/adc.h"
+#include "esp_adc_cal.h"
+//#include <ESP8266WiFi.h> //Für ESP8266
+#include <WiFi.h> //FÜR ESP32
+#define BUILTIN_LED 2 //Für ESP32
+#define PUMP_PIN 4
+#define MQTT_PATH_COMMAND  "command_channel"
+#define MQTT_PATH_EARTH_HUMIDITY  "earth_humidity_channel"
 // Update these with values suitable for your network.
 
-const char* ssid = " hier ssid einfuegen ";
+/*const char* ssid = " hier ssid einfuegen ";
 const char* password = " hier passwort einfuegen ";
-const char* mqtt_server = "192.168.10.58";
+const char* mqtt_server = "192.168.10.58";*/
+
+
+const char* ssid = "o2-WLAN80";
+const char* password = "49YMT8F7E84L8673";
+const char* mqtt_server = "192.168.178.57";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -45,6 +54,13 @@ unsigned long lastMsg = 0;
 #define MSG_BUFFER_SIZE	(50)
 char msg[MSG_BUFFER_SIZE];
 int value = 0;
+
+double getHumidity() { //TODO Testen und evtl. callibriren
+    double Hum;
+    int rawHum = adc1_get_raw(ADC1_CHANNEL_0);
+    Hum = (rawHum * 10) / 4019; //10 ist feucht 0 ist trocken
+    return Hum;
+}
 
 void setup_wifi() {
 
@@ -80,13 +96,30 @@ void callback(char* topic, byte* payload, unsigned int length) {
     Serial.println();
 
     // Switch on the LED if an 1 was received as first character
-    if ((char)payload[0] == '1') {
-        digitalWrite(BUILTIN_LED, LOW);   // Turn the LED on (Note that LOW is the voltage level
-        // but actually the LED is on; this is because
-        // it is active low on the ESP-01)
-    }
-    else {
-        digitalWrite(BUILTIN_LED, HIGH);  // Turn the LED off by making the voltage HIGH
+    //if ((char)payload[0] == '1') {
+    //    digitalWrite(BUILTIN_LED, LOW);   // Turn the LED on (Note that LOW is the voltage level
+    //    // but actually the LED is on; this is because
+    //    // it is active low on the ESP-01)
+    //}
+    //else {
+    //    digitalWrite(BUILTIN_LED, HIGH);  // Turn the LED off by making the voltage HIGH
+    //}
+
+    if ((char)payload[0] == 'p') //pump befehl
+    {//TODO wird das relais high oder low gesteuert?
+        //TODO DELAY IM CALLBACK UND LED GEHT NICHT WIRKLICH LANGE
+        digitalWrite(PUMP_PIN, HIGH);   
+        digitalWrite(BUILTIN_LED, LOW);//zum veranschaulichen
+        delay(1000);
+        delay(1000);
+        delay(1000);
+        delay(1000);
+        digitalWrite(PUMP_PIN, HIGH);
+        digitalWrite(BUILTIN_LED, LOW);
+        digitalWrite(PUMP_PIN, HIGH);
+        digitalWrite(BUILTIN_LED, LOW);
+        digitalWrite(PUMP_PIN, LOW);
+        digitalWrite(BUILTIN_LED, HIGH);
     }
 
 }
@@ -102,9 +135,14 @@ void reconnect() {
         if (client.connect(clientId.c_str())) {
             Serial.println("connected");
             // Once connected, publish an announcement...
-            client.publish("outTopic", "hello world");
+            //client.publish("outTopic", "hello world");
+
+            int iHum = 40; //TODO Hum auslesen und als string in MQTT
+            snprintf(msg, MSG_BUFFER_SIZE, "%ld", iHum);
+            client.publish(MQTT_PATH_EARTH_HUMIDITY, msg);
             // ... and resubscribe
-            client.subscribe("inTopic");
+           // client.subscribe("inTopic");
+            client.subscribe(MQTT_PATH_COMMAND);
         }
         else {
             Serial.print("failed, rc=");
@@ -116,8 +154,14 @@ void reconnect() {
     }
 }
 
+
 void setup() {
     pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
+    pinMode(PUMP_PIN, OUTPUT);//Pin Pumpe
+    //start adc
+    adc1_config_width(ADC_WIDTH_BIT_12);
+    adc1_config_channel_atten(ADC1_CHANNEL_0, ADC_ATTEN_DB_0);
+
     Serial.begin(115200);
     setup_wifi();
     client.setServer(mqtt_server, 1883);
@@ -135,9 +179,15 @@ void loop() {
     if (now - lastMsg > 2000) {
         lastMsg = now;
         ++value;
-        snprintf(msg, MSG_BUFFER_SIZE, "hello world #%ld", value);
-        Serial.print("Publish message: ");
-        Serial.println(msg);
-        client.publish("outTopic", msg);
+        //snprintf(msg, MSG_BUFFER_SIZE, "hello world #%ld", value);
+        //Serial.print("Publish message: ");
+        //Serial.println(msg);
+        //client.publish("outTopic", msg);
+        //Pi test
+        //client.publish("test_channel", msg); //funktioniert
+        int iHum = 40; //TODO Hum auslesen und als string in MQTT
+        snprintf(msg, MSG_BUFFER_SIZE, "%ld", iHum);
+        client.publish(MQTT_PATH_EARTH_HUMIDITY, msg);
+
     }
 }

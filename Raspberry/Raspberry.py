@@ -3,7 +3,7 @@
 #Raspberry: 
 # vorbereitungen (mosquitto, mqtt) siehe link https://tutorials-raspberrypi.de/datenaustausch-raspberry-pi-mqtt-broker-client/
 #Datei erstellen mit sudo nano DATEINAME.py
-#ausführen mit sudo python DATEINAME.py
+#ausfuehren mit sudo python DATEINAME.py
 #Nachrichten schicken mit mosquitto_pub -h localhost -t test_channel -m "Hello Raspberry Pi"
 #Die nachricht wird dann in der console ausgegeben und beim dem befehl:mosquitto_pub -h localhost -t test_channel -m "antworte"
 #antwortet der Pi
@@ -20,9 +20,9 @@ MQTT_SERVER = "localhost"
 #MQTT_PATH = "test_channel"
 MQTT_PATH_COMMAND="command_channel"
 MQTT_PATH_EARTH_HUMIDITY="earth_humidity_channel"
-MINHUM=50 #sobald dieser Feuchtigkeitswert unterschritten ist wird der Gießbefehl gesendet
- 
-# The callback for when the client receives a CONNACK response from the server.
+MINHUM=50 
+#sobald dieser Feuchtigkeitswert unterschritten ist wird der Giessbefehl gesendet
+#The callback for when the client receives a CONNACK response from the server.
 def on_connect(client, userdata, flags, rc):
     print("Connected with result code "+str(rc))
  
@@ -33,7 +33,7 @@ def on_connect(client, userdata, flags, rc):
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
    
-    humidity = int (msg.payload)-48
+    humidity = int (msg.payload)#-48
     print(msg.topic+" "+str(msg.payload)) 
     print(" humidity: "+str(humidity)) 
     print(" humidity als zahl: %d"%humidity) 
