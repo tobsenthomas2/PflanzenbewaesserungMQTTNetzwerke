@@ -20,7 +20,7 @@ MQTT_SERVER = "localhost"
 #MQTT_PATH = "test_channel"
 MQTT_PATH_COMMAND="command_channel"
 MQTT_PATH_EARTH_HUMIDITY="earth_humidity_channel"
-MINHUM=50
+MINHUM=50 #sobald dieser Feuchtigkeitswert unterschritten ist wird der Gießbefehl gesendet
  
 # The callback for when the client receives a CONNACK response from the server.
 def on_connect(client, userdata, flags, rc):
@@ -28,12 +28,8 @@ def on_connect(client, userdata, flags, rc):
  
     # Subscribing in on_connect() means that if we lose the connection and
     # reconnect then subscriptions will be renewed.
-    
-    #client.subscribe(MQTT_PATH)
     client.subscribe(MQTT_PATH_EARTH_HUMIDITY)
    
-   
- 
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
    
