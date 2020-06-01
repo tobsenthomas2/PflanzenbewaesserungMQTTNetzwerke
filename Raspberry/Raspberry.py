@@ -37,13 +37,14 @@ def on_connect(client, userdata, flags, rc):
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
    
-    humidity = float (msg.payload)
+    humidity = int (msg.payload)-48
     print(msg.topic+" "+str(msg.payload)) 
     print(" humidity: "+str(humidity)) 
+    print(" humidity als zahl: %d"%humidity) 
     # more callbacks, etc
-    if humidity <= MIMINHUM:
+    if humidity <= MINHUM:
         print(" humidity < 50. Pumpbefehl wird gesendet ") 
-        publish.single(MQTT_PATH_COMMAND, "pumpWater", hostname=MQTT_SERVER)
+        publish.single(MQTT_PATH_COMMAND, "p", hostname=MQTT_SERVER)
     #if str(msg.payload) =="antworte":
         
      #   publish.single(MQTT_PATH, "geantwortet und empfangen", hostname=MQTT_SERVER)
