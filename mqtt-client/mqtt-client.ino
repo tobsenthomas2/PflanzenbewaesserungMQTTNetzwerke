@@ -1,64 +1,80 @@
-/*
- Basic ESP8266 MQTT example
- This sketch demonstrates the capabilities of the pubsub library in combination
- with the ESP8266 board/library.
- It connects to an MQTT server then:
-  - publishes "hello world" to the topic "outTopic" every two seconds
-  - subscribes to the topic "inTopic", printing out any messages
-    it receives. NB - it assumes the received payloads are strings not binary
-  - If the first character of the topic "inTopic" is an 1, switch ON the ESP Led,
-    else switch it off
- It will reconnect to the server if the connection is lost using a blocking
- reconnect function. See the 'mqtt_reconnect_nonblocking' example for how to
- achieve the same result without blocking the main loop.
- To install the ESP8266 board, (using Arduino 1.6.4+):
-  - Add the following 3rd party board manager under "File -> Preferences -> Additional Boards Manager URLs":
-       http://arduino.esp8266.com/stable/package_esp8266com_index.json
-  - Open the "Tools -> Board -> Board Manager" and click install for the ESP8266"
-  - Select your ESP8266 in "Tools -> Board"
-*/
+
 
 /* Simon:
 verwendete Bibliothek: PubSubClient  die Bibliothek hab ich über die Arduino-IDE installiert.
 Anpassen muss man:
     wlan ssid und passwort
     IP das mqtt Server
-das verwendete topic lautet " /outTopic "; der Befehl auf dem Raspi: mosquitto_sub -d -t outTopic
+das verwendete topic lautet " /outTopic " (inwischen andere Topics); der Befehl auf dem Raspi: mosquitto_sub -d -t outTopic
 zum prüfen, ob der NodeMCU sich mit dem wlan verbindet und etwas ausgibt, hilft der serielle Monitor
 */
+#include <Arduino.h>
 
 #include <PubSubClient.h>
 //ADC
 #include "driver/adc.h"
 #include "esp_adc_cal.h"
-//#include <ESP8266WiFi.h> //Für ESP8266
+
+#define ESP32
+//#define ESP8266
+#ifdef ESP8266
+#include <ESP8266WiFi.h> //Für ESP8266
+#endif
+
+#ifdef ESP32
 #include <WiFi.h> //FÜR ESP32
 #define BUILTIN_LED 2 //Für ESP32
+#endif
+
 #define PUMP_PIN 4
 #define MQTT_PATH_COMMAND  "command_channel"
 #define MQTT_PATH_EARTH_HUMIDITY  "earth_humidity_channel"
 // Update these with values suitable for your network.
 
-/*const char* ssid = " hier ssid einfuegen ";
+//Bedingte Compilierung zum Debuggen
+#define DEBUG
+
+
+const char* ssid = " hier ssid einfuegen ";
 const char* password = " hier passwort einfuegen ";
-const char* mqtt_server = "192.168.10.58";*/
+const char* mqtt_server = "192.168.10.58";
 
 
-const char* ssid = "o2-WLAN80";
-const char* password = "49YMT8F7E84L8673";
-const char* mqtt_server = "192.168.178.57";
+//const char* ssid = "o2-WLAN80";
+//const char* password = "9YMT8F7E84L867";//4 3
+//const char* mqtt_server = "192.168.178.57";
+
+//Timer
+hw_timer_t* timer = NULL;
+
+
+// Potentiometer is connected to GPIO 34 (Analog ADC1_CH6) 
+const int potPin = 34;
+
+// variable for storing the potentiometer value
+int potValue = 0;
 
 WiFiClient espClient;
 PubSubClient client(espClient);
 unsigned long lastMsg = 0;
 #define MSG_BUFFER_SIZE	(50)
 char msg[MSG_BUFFER_SIZE];
-int value = 0;
 
-double getHumidity() { //TODO Testen und evtl. callibriren
-    double Hum;
-    int rawHum = adc1_get_raw(ADC1_CHANNEL_0);
-    Hum = (rawHum * 10) / 4019; //10 ist feucht 0 ist trocken
+char cStatus = 's';//anfangswertStop
+
+//Timer um pumpen abzubrehcne
+void IRAM_ATTR onTimer() {
+#ifdef DEBUG
+    Serial.println("TimInt");
+#endif
+    cStatus = 's'; //stopstatus der variable
+}
+
+//Funktion um Erdfeuchte zu messen
+int getHumidity() { //TODO Testen und evtl. callibriren
+    int Hum;
+    int rawHum = analogRead(potPin);// Reading potentiometer value
+    Hum = (rawHum * 100) / 4095; //10 ist feucht 0 ist trocken
     return Hum;
 }
 
@@ -95,31 +111,12 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }
     Serial.println();
 
-    // Switch on the LED if an 1 was received as first character
-    //if ((char)payload[0] == '1') {
-    //    digitalWrite(BUILTIN_LED, LOW);   // Turn the LED on (Note that LOW is the voltage level
-    //    // but actually the LED is on; this is because
-    //    // it is active low on the ESP-01)
-    //}
-    //else {
-    //    digitalWrite(BUILTIN_LED, HIGH);  // Turn the LED off by making the voltage HIGH
-    //}
+    
 
     if ((char)payload[0] == 'p') //pump befehl
-    {//TODO wird das relais high oder low gesteuert?
-        //TODO DELAY IM CALLBACK UND LED GEHT NICHT WIRKLICH LANGE
-        digitalWrite(PUMP_PIN, HIGH);   
-        digitalWrite(BUILTIN_LED, LOW);//zum veranschaulichen
-        delay(1000);
-        delay(1000);
-        delay(1000);
-        delay(1000);
-        digitalWrite(PUMP_PIN, HIGH);
-        digitalWrite(BUILTIN_LED, LOW);
-        digitalWrite(PUMP_PIN, HIGH);
-        digitalWrite(BUILTIN_LED, LOW);
-        digitalWrite(PUMP_PIN, LOW);
-        digitalWrite(BUILTIN_LED, HIGH);
+        
+    {
+        cStatus = 'p';//status Variable bei Command p ändern (Pumpbefehl)
     }
 
 }
@@ -137,7 +134,7 @@ void reconnect() {
             // Once connected, publish an announcement...
             //client.publish("outTopic", "hello world");
 
-            int iHum = 40; //TODO Hum auslesen und als string in MQTT
+            int iHum = getHumidity(); //TODO Hum auslesen und als string in MQTT
             snprintf(msg, MSG_BUFFER_SIZE, "%ld", iHum);
             client.publish(MQTT_PATH_EARTH_HUMIDITY, msg);
             // ... and resubscribe
@@ -158,11 +155,17 @@ void reconnect() {
 void setup() {
     pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
     pinMode(PUMP_PIN, OUTPUT);//Pin Pumpe
-    //start adc
-    adc1_config_width(ADC_WIDTH_BIT_12);
-    adc1_config_channel_atten(ADC1_CHANNEL_0, ADC_ATTEN_DB_0);
-
     Serial.begin(115200);
+    /* 1 tick take 1/(80MHZ/80) = 1us so we set divider 80 and count up */
+    timer = timerBegin(0, 80, true);
+    /* Attach onTimer function to our timer */
+    timerAttachInterrupt(timer, &onTimer, true);
+
+    /* Set alarm to call onTimer function every second 1 tick is 1us
+    => 1 second is 1000000us */
+    /* Repeat the alarm (third parameter = true) */
+    timerAlarmWrite(timer, 5000000, false);//pumpt für 5 Sekunden
+
     setup_wifi();
     client.setServer(mqtt_server, 1883);
     client.setCallback(callback);
@@ -178,16 +181,35 @@ void loop() {
     unsigned long now = millis();
     if (now - lastMsg > 2000) {
         lastMsg = now;
-        ++value;
-        //snprintf(msg, MSG_BUFFER_SIZE, "hello world #%ld", value);
-        //Serial.print("Publish message: ");
-        //Serial.println(msg);
-        //client.publish("outTopic", msg);
-        //Pi test
-        //client.publish("test_channel", msg); //funktioniert
-        int iHum = 40; //TODO Hum auslesen und als string in MQTT
+        
+        int iHum = getHumidity(); //TODO Hum auslesen und als string in MQTT
+        //TODO der adc ist nicht linear. es muss evtl. calibriert werden und evtl. werte mitteln (auch im Pi möglich)
         snprintf(msg, MSG_BUFFER_SIZE, "%ld", iHum);
-        client.publish(MQTT_PATH_EARTH_HUMIDITY, msg);
+#ifdef DEBUG
+        Serial.print("Debug Hum:");
+        Serial.println(msg);
+#endif // DEBUG
 
+        client.publish(MQTT_PATH_EARTH_HUMIDITY, msg);
+        if (cStatus == 'p') //pumpen
+        {
+            //TODO wird das relais high oder low gesteuert?
+            
+#ifdef DEBUG
+            Serial.println("Pumpe an");
+#endif
+            digitalWrite(PUMP_PIN, HIGH);
+            digitalWrite(BUILTIN_LED, HIGH);//zum veranschaulichen
+            timerAlarmEnable(timer);//Startet Timer um Pumpe wieder auszuschalten 
+       
+        }
+        if (cStatus == 's')//statusvar auf stop
+        {
+#ifdef DEBUG
+            Serial.println("Pumpe aus");
+#endif
+            digitalWrite(PUMP_PIN, LOW);
+            digitalWrite(BUILTIN_LED, LOW);
+        }
     }
 }
