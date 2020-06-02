@@ -11,7 +11,7 @@ import time
 
 
 # Don't forget to change the variables for the MQTT broker!
-mqtt_topic = [("outTopic",0),("inTopic",0)] #hier die Topics eintragen, die aufgezeichnet werden sollen
+mqtt_topic = [("command_channel",0),("earth_humidity_channel",0)] #hier die Topics eintragen, die aufgezeichnet werden sollen
 mqtt_broker_ip = "192.168.10.58"
 
 client = mqtt.Client()
