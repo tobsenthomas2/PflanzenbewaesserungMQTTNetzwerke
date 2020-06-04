@@ -7,6 +7,10 @@ Anpassen muss man:
     IP das mqtt Server
 das verwendete topic lautet " /outTopic " (inwischen andere Topics); der Befehl auf dem Raspi: mosquitto_sub -d -t outTopic
 zum prüfen, ob der NodeMCU sich mit dem wlan verbindet und etwas ausgibt, hilft der serielle Monitor
+
+Sensor am ESP8266: A0
+Timer so nicht möglich -> millis()
+
 */
 #include <Arduino.h>
 
@@ -36,7 +40,7 @@ zum prüfen, ob der NodeMCU sich mit dem wlan verbindet und etwas ausgibt, hilft
 
 
 const char* ssid = "wlankuhl";
-const char* password = "GreenLineNew3";
+const char* password = "leer";
 const char* mqtt_server = "192.168.10.58";
 
 
