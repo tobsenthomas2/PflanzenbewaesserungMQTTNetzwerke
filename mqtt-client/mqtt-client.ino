@@ -12,11 +12,11 @@ zum prüfen, ob der NodeMCU sich mit dem wlan verbindet und etwas ausgibt, hilft
 
 #include <PubSubClient.h>
 //ADC
-#include "driver/adc.h"
-#include "esp_adc_cal.h"
+//#include "driver/adc.h"
+//#include "esp_adc_cal.h"
 
-#define ESP32
-//#define ESP8266
+//#define ESP32
+#define ESP8266
 #ifdef ESP8266
 #include <ESP8266WiFi.h> //Für ESP8266
 #endif
@@ -35,8 +35,8 @@ zum prüfen, ob der NodeMCU sich mit dem wlan verbindet und etwas ausgibt, hilft
 #define DEBUG
 
 
-const char* ssid = " hier ssid einfuegen ";
-const char* password = " hier passwort einfuegen ";
+const char* ssid = "wlankuhl";
+const char* password = "GreenLineNew3";
 const char* mqtt_server = "192.168.10.58";
 
 
@@ -45,7 +45,7 @@ const char* mqtt_server = "192.168.10.58";
 //const char* mqtt_server = "192.168.178.57";
 
 //Timer
-hw_timer_t* timer = NULL;
+//hw_timer_t* timer = NULL;
 
 
 // Potentiometer is connected to GPIO 34 (Analog ADC1_CH6) 
@@ -157,14 +157,14 @@ void setup() {
     pinMode(PUMP_PIN, OUTPUT);//Pin Pumpe
     Serial.begin(115200);
     /* 1 tick take 1/(80MHZ/80) = 1us so we set divider 80 and count up */
-    timer = timerBegin(0, 80, true);
+   // timer = timerBegin(0, 80, true);
     /* Attach onTimer function to our timer */
-    timerAttachInterrupt(timer, &onTimer, true);
+  //  timerAttachInterrupt(timer, &onTimer, true);
 
     /* Set alarm to call onTimer function every second 1 tick is 1us
     => 1 second is 1000000us */
     /* Repeat the alarm (third parameter = true) */
-    timerAlarmWrite(timer, 5000000, false);//pumpt für 5 Sekunden
+  //  timerAlarmWrite(timer, 5000000, false);//pumpt für 5 Sekunden
 
     setup_wifi();
     client.setServer(mqtt_server, 1883);
@@ -200,7 +200,7 @@ void loop() {
 #endif
             digitalWrite(PUMP_PIN, HIGH);
             digitalWrite(BUILTIN_LED, HIGH);//zum veranschaulichen
-            timerAlarmEnable(timer);//Startet Timer um Pumpe wieder auszuschalten 
+            //timerAlarmEnable(timer);//Startet Timer um Pumpe wieder auszuschalten 
        
         }
         if (cStatus == 's')//statusvar auf stop
