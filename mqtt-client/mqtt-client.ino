@@ -26,6 +26,13 @@ zum prüfen, ob der NodeMCU sich mit dem wlan verbindet und etwas ausgibt, hilft
 #define BUILTIN_LED 2 //Für ESP32
 #endif
 
+
+//DeppSleep
+#define uS_TO_S_FACTOR 1000000ULL  /* Conversion factor for micro seconds to seconds */
+#define TIME_TO_SLEEP  5        /* Time ESP32 will go to sleep (in seconds) */
+RTC_DATA_ATTR int bootCount = 0;
+
+//giessen
 #define PUMP_PIN 4
 #define MQTT_PATH_COMMAND  "command_channel"
 #define MQTT_PATH_EARTH_HUMIDITY  "earth_humidity_channel"
@@ -76,6 +83,23 @@ int getHumidity() { //TODO Testen und evtl. callibriren
     int rawHum = analogRead(potPin);// Reading potentiometer value
     Hum = (rawHum * 100) / 4095; //10 ist feucht 0 ist trocken
     return Hum;
+}
+
+
+void print_wakeup_reason() {
+    esp_sleep_wakeup_cause_t wakeup_reason;
+
+    wakeup_reason = esp_sleep_get_wakeup_cause();
+
+    switch (wakeup_reason)
+    {
+    case ESP_SLEEP_WAKEUP_EXT0: Serial.println("Wakeup caused by external signal using RTC_IO"); break;
+    case ESP_SLEEP_WAKEUP_EXT1: Serial.println("Wakeup caused by external signal using RTC_CNTL"); break;
+    case ESP_SLEEP_WAKEUP_TIMER: Serial.println("Wakeup caused by timer"); break;
+    case ESP_SLEEP_WAKEUP_TOUCHPAD: Serial.println("Wakeup caused by touchpad"); break;
+    case ESP_SLEEP_WAKEUP_ULP: Serial.println("Wakeup caused by ULP program"); break;
+    default: Serial.printf("Wakeup was not caused by deep sleep: %d\n", wakeup_reason); break;
+    }
 }
 
 void setup_wifi() {
@@ -169,6 +193,22 @@ void setup() {
     setup_wifi();
     client.setServer(mqtt_server, 1883);
     client.setCallback(callback);
+
+    //Increment boot number and print it every reboot
+    ++bootCount;
+    Serial.println("Boot number: " + String(bootCount));
+
+    //Print the wakeup reason for ESP32
+    print_wakeup_reason();
+    esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
+    Serial.println("Setup ESP32 to sleep for every " + String(TIME_TO_SLEEP) +
+        " Seconds");
+
+
+    Serial.println("Going to sleep now");
+    Serial.flush();
+    //esp_deep_sleep_start();
+
 }
 
 void loop() {
@@ -201,6 +241,7 @@ void loop() {
             digitalWrite(PUMP_PIN, HIGH);
             digitalWrite(BUILTIN_LED, HIGH);//zum veranschaulichen
             timerAlarmEnable(timer);//Startet Timer um Pumpe wieder auszuschalten 
+            esp_deep_sleep_start();
        
         }
         if (cStatus == 's')//statusvar auf stop
@@ -210,6 +251,8 @@ void loop() {
 #endif
             digitalWrite(PUMP_PIN, LOW);
             digitalWrite(BUILTIN_LED, LOW);
+            esp_deep_sleep_start();
         }
     }
 }
+
