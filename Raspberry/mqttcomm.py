@@ -12,8 +12,8 @@ import paho.mqtt.client as mqtt
 
 import time
 
+import csv
 
-#################################TEST wir haben 21:03 am 09.06
 
 # Don't forget to change the variables for the MQTT broker!
 #mqtt_topic = [("earth_humidity_channel",0),("command_channel",0)]
@@ -23,11 +23,33 @@ mqtt_broker_ip = "192.168.178.57"
 
 client = mqtt.Client()
 
+#Import der member-Einstellung ueber die Datei input.csv
+
+with open("input.csv", "r") as f_input:
+	csv_input = csv.DictReader(f_input)
+	members=sum(1 for row in f_input)-1 #ermittelt wie viele Zeilen es gibt(Kopfzeile ausgenommen) = Anzahl MCUs
+	print("Anzahl Teilnehmer: ", members)
+	f_input.seek(0) #Pointer an File-Beginn setzen
+	
+	for row in csv_input:
+		id = row['$id']
+		name = row['name']
+		frequency = row['freq']
+		duration = row['dur']
+
+		exec "name%s=name" % (id) #erstellt variablen fuer alle MCUs
+		exec "frequency%s=frequency" % (id)
+		exec "duration%s=duration" % (id)
+
+		print(id, name, frequency, duration)
+
+
+
 
 # x teilnehmer koennen mit dieser for unterschieden werden
 #es wird nach jeder topic eine Zahl geschrieben
 
-members=2    #hier muss die richtige Anzahl an Teilnemhern -1 stehen
+#members=2    #hier muss die richtige Anzahl an Teilnemhern -1 stehen
 
 humidityMin=840#ab diesem Sensor wert wird gepumpt
 
