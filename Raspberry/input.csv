@@ -1,5 +1,5 @@
-$id,name,freq,dur
-1,Pflanze1,2,100
-2,Pflanze2,5,20
-3,Pflanze3,10,5
-4,Pflanze4,3,50
+$id,name,freq,dur,hum
+1,Pflanze1,2,100,840
+2,Pflanze2,5,20,820
+3,Pflanze3,10,5,810
+4,Pflanze4,3,50,790
