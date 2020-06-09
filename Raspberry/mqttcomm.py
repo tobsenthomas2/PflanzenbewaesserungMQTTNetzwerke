@@ -23,6 +23,7 @@ client = mqtt.Client()
 
 # x teilnehmer koennen mit dieser for unterschieden werden
 #es wird nach jeder topic eine Zahl geschrieben
+
 members=2    #hier muss die richtige Anzahl an Teilnemhern -1 stehen
 
 humidityMin=840#ab diesem Sensor wert wird gepumpt
