@@ -1,7 +1,7 @@
-#empfängt Daten vom ESP und aktiviert abhängig der Feuchtigkeit die Pumpe
+#empfaengt Daten vom ESP und aktiviert abhaengig der Feuchtigkeit die Pumpe
 #TODO:
-#   Pumpe abschalten. Problem: Timer geht nicht, da wegen dem einlesen der Werte alles im loop läuft
-#   Ansätze: Auswertung vom Daten erfassen trennen 
+#   Pumpe abschalten. Problem: Timer geht nicht, da wegen dem einlesen der Werte alles im loop laeuft
+#   Ansaetze: Auswertung vom Daten erfassen trennen 
 #           *zweites File und globale Variablen: hat nicht geklappt 
 #           *publish p2000 an den ESP um den timer mit 2000 ms dort laufen zu lassen -> "p2000" symbolweise auslesen
 #           *threading in python verwenden -> kompliziert
