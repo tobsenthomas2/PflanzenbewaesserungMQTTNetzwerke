@@ -32,9 +32,13 @@ zum prüfen, ob der NodeMCU sich mit dem wlan verbindet und etwas ausgibt, hilft
 #define sensorPin 34
 #endif
 
+//////////////////////////////////////////////////////
 
-#define MQTT_PATH_COMMAND  "command_channel"
-#define MQTT_PATH_EARTH_HUMIDITY  "earth_humidity_channel"
+//Je nach Teilnehmer die Nummer hinter den MQTT_PATH ändern ( bei 3 teilnehmer 0-2)
+
+////////////////////////////////////////////////////
+#define MQTT_PATH_COMMAND  "command_channel0"
+#define MQTT_PATH_EARTH_HUMIDITY  "earth_humidity_channel0"
 // Update these with values suitable for your network.
 
 //Bedingte Compilierung zum Debuggen
@@ -186,7 +190,7 @@ void loop() {
     client.loop();
 
     unsigned long now = millis();
-    if (now - lastMsg > 3000) {
+    if (now - lastMsg > 15000) {
         lastMsg = now;
         
         int iHum = getHumidity(); //TODO Hum auslesen und als string in MQTT
@@ -198,7 +202,8 @@ void loop() {
 #endif // DEBUG
 
         client.publish(MQTT_PATH_EARTH_HUMIDITY, msg);
-
+        Serial.print("published in\n");
+        Serial.print(MQTT_PATH_EARTH_HUMIDITY);
         if (cStatus == 'p') //pumpen
         {
             //TODO wird das relais high oder low gesteuert?
@@ -220,5 +225,6 @@ void loop() {
             digitalWrite(PUMP_PIN, HIGH);
             digitalWrite(BUILTIN_LED, HIGH);
         }
+
     }
 }
