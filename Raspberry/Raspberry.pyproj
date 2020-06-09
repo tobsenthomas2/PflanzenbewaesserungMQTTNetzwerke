@@ -23,6 +23,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="mqtt-subscribe.py" />
+    <Compile Include="mqttcomm.py" />
     <Compile Include="paho\mqtt\client.py" />
     <Compile Include="paho\mqtt\matcher.py" />
     <Compile Include="paho\mqtt\packettypes.py" />

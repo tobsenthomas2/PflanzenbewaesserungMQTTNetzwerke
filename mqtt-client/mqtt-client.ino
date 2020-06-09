@@ -7,23 +7,29 @@ Anpassen muss man:
     IP das mqtt Server
 das verwendete topic lautet " /outTopic " (inwischen andere Topics); der Befehl auf dem Raspi: mosquitto_sub -d -t outTopic
 zum prüfen, ob der NodeMCU sich mit dem wlan verbindet und etwas ausgibt, hilft der serielle Monitor
+
+
 */
 #include <Arduino.h>
 
 #include <PubSubClient.h>
 //ADC
-#include "driver/adc.h"
-#include "esp_adc_cal.h"
+//#include "driver/adc.h"
+//#include "esp_adc_cal.h"
 
 #define ESP32
 //#define ESP8266
 #ifdef ESP8266
 #include <ESP8266WiFi.h> //Für ESP8266
+#define PUMP_PIN 4 //Pin D2
+#define sensorPin 0
 #endif
 
 #ifdef ESP32
 #include <WiFi.h> //FÜR ESP32
 #define BUILTIN_LED 2 //Für ESP32
+#define PUMP_PIN 4
+#define sensorPin 34
 #endif
 
 
@@ -34,32 +40,32 @@ RTC_DATA_ATTR int bootCount = 0;
 
 //giessen
 #define PUMP_PIN 4
-#define MQTT_PATH_COMMAND  "command_channel"
-#define MQTT_PATH_EARTH_HUMIDITY  "earth_humidity_channel"
+//////////////////////////////////////////////////////
+
+//Je nach Teilnehmer die Nummer hinter den MQTT_PATH ändern ( bei 3 teilnehmer 0-2)
+
+////////////////////////////////////////////////////
+#define MQTT_PATH_COMMAND  "command_channel0"
+#define MQTT_PATH_EARTH_HUMIDITY  "earth_humidity_channel0"
 // Update these with values suitable for your network.
 
 //Bedingte Compilierung zum Debuggen
 #define DEBUG
 
 
-const char* ssid = " hier ssid einfuegen ";
-const char* password = " hier passwort einfuegen ";
-const char* mqtt_server = "192.168.10.58";
+//const char* ssid = "wlankuhl";
+//const char* password = "leer";
+//const char* mqtt_server = "192.168.10.58";
 
 
-//const char* ssid = "o2-WLAN80";
-//const char* password = "9YMT8F7E84L867";//4 3
-//const char* mqtt_server = "192.168.178.57";
+const char* ssid = "o2-WLAN80";
+const char* password = "49YMT8F7E84L8673";//4 3
+const char* mqtt_server = "192.168.178.57";
 
 //Timer
 hw_timer_t* timer = NULL;
 
 
-// Potentiometer is connected to GPIO 34 (Analog ADC1_CH6) 
-const int potPin = 34;
-
-// variable for storing the potentiometer value
-int potValue = 0;
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -69,6 +75,7 @@ char msg[MSG_BUFFER_SIZE];
 
 char cStatus = 's';//anfangswertStop
 
+//Funktioniert am ESP8266 leider nicht! -> stattdessen mit millis() arbeiten, läuft überall
 //Timer um pumpen abzubrehcne
 void IRAM_ATTR onTimer() {
 #ifdef DEBUG
@@ -78,10 +85,12 @@ void IRAM_ATTR onTimer() {
 }
 
 //Funktion um Erdfeuchte zu messen
+//Sensor kalibirieren: siehe hier: https://wiki.dfrobot.com/Capacitive_Soil_Moisture_Sensor_SKU_SEN0193
 int getHumidity() { //TODO Testen und evtl. callibriren
     int Hum;
-    int rawHum = analogRead(potPin);// Reading potentiometer value
-    Hum = (rawHum * 100) / 4095; //10 ist feucht 0 ist trocken
+    int rawHum = analogRead(sensorPin);// Reading potentiometer value
+   // Hum = (rawHum * 100) / 4095; //10 ist feucht 0 ist trocken
+    Hum = rawHum;
     return Hum;
 }
 
@@ -137,10 +146,13 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
     
 
-    if ((char)payload[0] == 'p') //pump befehl
-        
+    if ((char)payload[0] == 'p') //pump befehl        
     {
         cStatus = 'p';//status Variable bei Command p ändern (Pumpbefehl)
+    }
+    if ((char)payload[0] == 's') //pump befehl
+    {
+        cStatus = 's';//status Variable bei Command p ändern (Pumpbefehl)
     }
 
 }
@@ -219,7 +231,7 @@ void loop() {
     client.loop();
 
     unsigned long now = millis();
-    if (now - lastMsg > 2000) {
+    if (now - lastMsg > 15000) {
         lastMsg = now;
         
         int iHum = getHumidity(); //TODO Hum auslesen und als string in MQTT
@@ -231,6 +243,8 @@ void loop() {
 #endif // DEBUG
 
         client.publish(MQTT_PATH_EARTH_HUMIDITY, msg);
+        Serial.print("published in\n");
+        Serial.print(MQTT_PATH_EARTH_HUMIDITY);
         if (cStatus == 'p') //pumpen
         {
             //TODO wird das relais high oder low gesteuert?
@@ -244,6 +258,7 @@ void loop() {
             esp_deep_sleep_start();
        
         }
+
         if (cStatus == 's')//statusvar auf stop
         {
 #ifdef DEBUG
@@ -253,6 +268,7 @@ void loop() {
             digitalWrite(BUILTIN_LED, LOW);
             esp_deep_sleep_start();
         }
+
     }
 }
 
