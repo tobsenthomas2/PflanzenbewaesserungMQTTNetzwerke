@@ -1,6 +1,6 @@
 #empfaengt Daten vom ESP und aktiviert abhaengig der Feuchtigkeit die Pumpe
 #TODO:
-#   Pumpe abschalten. Problem: Timer geht nicht, da wegen dem einlesen der Werte alles im loop laeuft
+#   Pumpe abschalten. Problem: Timer geht nicht, da wegen dem einlesen der Werte alles im loop l�uft
 #   Ansaetze: Auswertung vom Daten erfassen trennen 
 #           *zweites File und globale Variablen: hat nicht geklappt 
 #           *publish p2000 an den ESP um den timer mit 2000 ms dort laufen zu lassen -> "p2000" symbolweise auslesen
@@ -9,9 +9,13 @@
 
 import paho.mqtt.client as mqtt
 
+import time
+
 # Don't forget to change the variables for the MQTT broker!
 mqtt_topic = [("earth_humidity_channel",0),("command_channel",0)]
-mqtt_broker_ip = "192.168.10.58"
+#mqtt_broker_ip = "192.168.10.58"
+mqtt_broker_ip = "192.168.178.57"
+
 
 client = mqtt.Client()
 
@@ -41,8 +45,13 @@ def on_message(client, userdata, msg):
         #stoptime = starttime + datetime.timedelta(seconds=10)
         client.publish("command_channel","p")
         print("Pumpe gestartet")
-        print(starttime, stoptime)
-    print("hallo")
+        #print(starttime, stoptime)
+        print("Before the sleep statement")
+        time.sleep(5)
+        print("After the sleep statement")
+        client.publish("command_channel","s")
+
+    
    
 
     # The message itself is stored in the msg variable

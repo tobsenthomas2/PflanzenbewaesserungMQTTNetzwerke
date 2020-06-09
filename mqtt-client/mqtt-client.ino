@@ -17,8 +17,8 @@ zum prüfen, ob der NodeMCU sich mit dem wlan verbindet und etwas ausgibt, hilft
 //#include "driver/adc.h"
 //#include "esp_adc_cal.h"
 
-//#define ESP32
-#define ESP8266
+#define ESP32
+//#define ESP8266
 #ifdef ESP8266
 #include <ESP8266WiFi.h> //Für ESP8266
 #define PUMP_PIN 4 //Pin D2
@@ -29,7 +29,7 @@ zum prüfen, ob der NodeMCU sich mit dem wlan verbindet und etwas ausgibt, hilft
 #include <WiFi.h> //FÜR ESP32
 #define BUILTIN_LED 2 //Für ESP32
 #define PUMP_PIN 4
-#define sensorPin 0
+#define sensorPin 34
 #endif
 
 
@@ -41,14 +41,14 @@ zum prüfen, ob der NodeMCU sich mit dem wlan verbindet und etwas ausgibt, hilft
 #define DEBUG
 
 
-const char* ssid = "wlankuhl";
-const char* password = "leer";
-const char* mqtt_server = "192.168.10.58";
+//const char* ssid = "wlankuhl";
+//const char* password = "leer";
+//const char* mqtt_server = "192.168.10.58";
 
 
-//const char* ssid = "o2-WLAN80";
-//const char* password = "9YMT8F7E84L867";//4 3
-//const char* mqtt_server = "192.168.178.57";
+const char* ssid = "o2-WLAN80";
+const char* password = "49YMT8F7E84L8673";//4 3
+const char* mqtt_server = "192.168.178.57";
 
 //Timer
 //hw_timer_t* timer = NULL;
