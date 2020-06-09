@@ -17,8 +17,21 @@ zum prüfen, ob der NodeMCU sich mit dem wlan verbindet und etwas ausgibt, hilft
 //#include "driver/adc.h"
 //#include "esp_adc_cal.h"
 
+//Welchen Chip benutzt du?
 #define ESP32
 //#define ESP8266
+
+//Bedingte Compilierung zum Debuggen
+#define DEBUG
+//#define DEEPSLEEP //da es noch nicht richtig funktioniert
+
+//////////////////////////////////////////////////////
+//Je nach Teilnehmer die Nummer hinter den MQTT_PATH ändern ( bei 3 teilnehmer 0-2)
+////////////////////////////////////////////////////
+#define MQTT_PATH_COMMAND  "command_channel1"
+#define MQTT_PATH_EARTH_HUMIDITY  "earth_humidity_channel1"
+
+
 #ifdef ESP8266
 #include <ESP8266WiFi.h> //Für ESP8266
 #define PUMP_PIN 4 //Pin D2
@@ -30,27 +43,20 @@ zum prüfen, ob der NodeMCU sich mit dem wlan verbindet und etwas ausgibt, hilft
 #define BUILTIN_LED 2 //Für ESP32
 #define PUMP_PIN 4
 #define sensorPin 34
+#define maxTimeToPump 20000000 //in us//ein timer wird beim pumpbefehl gestartet, welcher das pumpen abbricht, fall es diese zeit überschreitet
 #endif
 
-
+#ifdef DEEPSLEEP
 //DeppSleep
 #define uS_TO_S_FACTOR 1000000ULL  /* Conversion factor for micro seconds to seconds */
-#define TIME_TO_SLEEP  5        /* Time ESP32 will go to sleep (in seconds) */
+#define TIME_TO_SLEEP  60        /* Time ESP32 will go to sleep (in seconds) */
 RTC_DATA_ATTR int bootCount = 0;
-
+#endif
 //giessen
 #define PUMP_PIN 4
-//////////////////////////////////////////////////////
 
-//Je nach Teilnehmer die Nummer hinter den MQTT_PATH ändern ( bei 3 teilnehmer 0-2)
-
-////////////////////////////////////////////////////
-#define MQTT_PATH_COMMAND  "command_channel0"
-#define MQTT_PATH_EARTH_HUMIDITY  "earth_humidity_channel0"
 // Update these with values suitable for your network.
 
-//Bedingte Compilierung zum Debuggen
-#define DEBUG
 
 
 //const char* ssid = "wlankuhl";
@@ -62,9 +68,11 @@ const char* ssid = "o2-WLAN80";
 const char* password = "49YMT8F7E84L8673";//4 3
 const char* mqtt_server = "192.168.178.57";
 
+#ifdef ESP32
+
 //Timer
 hw_timer_t* timer = NULL;
-
+#endif
 
 
 WiFiClient espClient;
@@ -75,6 +83,7 @@ char msg[MSG_BUFFER_SIZE];
 
 char cStatus = 's';//anfangswertStop
 
+#ifdef ESP32
 //Funktioniert am ESP8266 leider nicht! -> stattdessen mit millis() arbeiten, läuft überall
 //Timer um pumpen abzubrehcne
 void IRAM_ATTR onTimer() {
@@ -83,18 +92,19 @@ void IRAM_ATTR onTimer() {
 #endif
     cStatus = 's'; //stopstatus der variable
 }
-
+#endif
 //Funktion um Erdfeuchte zu messen
 //Sensor kalibirieren: siehe hier: https://wiki.dfrobot.com/Capacitive_Soil_Moisture_Sensor_SKU_SEN0193
 int getHumidity() { //TODO Testen und evtl. callibriren
     int Hum;
     int rawHum = analogRead(sensorPin);// Reading potentiometer value
-   // Hum = (rawHum * 100) / 4095; //10 ist feucht 0 ist trocken
+   // Hum = (rawHum * 100) / 4095; //100 ist feucht 0 ist trocken
+   // Hum = (rawHum * 100) / 4095; //100 ist feucht 0 ist trocken
     Hum = rawHum;
     return Hum;
 }
 
-
+#ifdef DEEPSLEEP
 void print_wakeup_reason() {
     esp_sleep_wakeup_cause_t wakeup_reason;
 
@@ -110,7 +120,7 @@ void print_wakeup_reason() {
     default: Serial.printf("Wakeup was not caused by deep sleep: %d\n", wakeup_reason); break;
     }
 }
-
+#endif
 void setup_wifi() {
 
     delay(10);
@@ -192,6 +202,7 @@ void setup() {
     pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
     pinMode(PUMP_PIN, OUTPUT);//Pin Pumpe
     Serial.begin(115200);
+#ifdef ESP32
     /* 1 tick take 1/(80MHZ/80) = 1us so we set divider 80 and count up */
     timer = timerBegin(0, 80, true);
     /* Attach onTimer function to our timer */
@@ -200,12 +211,12 @@ void setup() {
     /* Set alarm to call onTimer function every second 1 tick is 1us
     => 1 second is 1000000us */
     /* Repeat the alarm (third parameter = true) */
-    timerAlarmWrite(timer, 5000000, false);//pumpt für 5 Sekunden
-
+    timerAlarmWrite(timer, maxTimeToPump, false);
+#endif
     setup_wifi();
     client.setServer(mqtt_server, 1883);
     client.setCallback(callback);
-
+#ifdef DEEPSLEEP
     //Increment boot number and print it every reboot
     ++bootCount;
     Serial.println("Boot number: " + String(bootCount));
@@ -217,10 +228,11 @@ void setup() {
         " Seconds");
 
 
-    Serial.println("Going to sleep now");
-    Serial.flush();
-    //esp_deep_sleep_start();
+   // Serial.println("Going to sleep now");
+    //Serial.flush();
 
+    //esp_deep_sleep_start();
+#endif
 }
 
 void loop() {
@@ -245,6 +257,7 @@ void loop() {
         client.publish(MQTT_PATH_EARTH_HUMIDITY, msg);
         Serial.print("published in\n");
         Serial.print(MQTT_PATH_EARTH_HUMIDITY);
+        delay(5000);
         if (cStatus == 'p') //pumpen
         {
             //TODO wird das relais high oder low gesteuert?
@@ -254,8 +267,11 @@ void loop() {
 #endif
             digitalWrite(PUMP_PIN, HIGH);
             digitalWrite(BUILTIN_LED, HIGH);//zum veranschaulichen
-            timerAlarmEnable(timer);//Startet Timer um Pumpe wieder auszuschalten 
-            esp_deep_sleep_start();
+            Serial.println("Timer Starten");
+#ifdef ESP32
+            timerAlarmEnable(timer);//Startet Timer um unendliches pumpen zu vermeiden, falls kein stopp befehl vom raspberry kommt 
+#endif
+          //esp_deep_sleep_start();
        
         }
 
@@ -266,8 +282,15 @@ void loop() {
 #endif
             digitalWrite(PUMP_PIN, LOW);
             digitalWrite(BUILTIN_LED, LOW);
-            esp_deep_sleep_start();
+#ifdef ESP32
+            timerAlarmDisable(timer);//Schaltet den Timer aus wenn stop befehl von raspPi kommt
+#endif
+            Serial.println("jetzt wird geschlafen");
+#ifdef DEEPSLEEP
+           // esp_deep_sleep_start(); //TODO bisher klappt danach das empfangen nicht richtig
+#endif
         }
+        cStatus = 0;
 
     }
 }
