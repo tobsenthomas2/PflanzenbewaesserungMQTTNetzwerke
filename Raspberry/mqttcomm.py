@@ -12,6 +12,9 @@ import paho.mqtt.client as mqtt
 
 import time
 
+
+#################################TEST wir haben 21:03 am 09.06
+
 # Don't forget to change the variables for the MQTT broker!
 #mqtt_topic = [("earth_humidity_channel",0),("command_channel",0)]
 #mqtt_broker_ip = "192.168.10.58"
