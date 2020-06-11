@@ -105,7 +105,7 @@ int getHumidity() { //TODO Testen und evtl. callibriren
 }
 
 #ifdef DEEPSLEEP
-int sleepTime;
+int sleepTime=0;
 void print_wakeup_reason() {
     esp_sleep_wakeup_cause_t wakeup_reason;
 
