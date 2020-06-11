@@ -59,14 +59,14 @@ RTC_DATA_ATTR int bootCount = 0;
 
 
 
-//const char* ssid = "wlankuhl";
-//const char* password = "leer";
-//const char* mqtt_server = "192.168.10.58";
+const char* ssid = "wlankuhl";
+const char* password = "GreenLineNew3";
+const char* mqtt_server = "192.168.10.58";
 
 
-const char* ssid = "o2-WLAN80";
-const char* password = "49YMT8F7E84L8673";//4 3
-const char* mqtt_server = "192.168.178.57";
+//const char* ssid = "o2-WLAN80";
+//const char* password = "49YMT8F7E84L8673";//4 3
+//const char* mqtt_server = "192.168.178.57";
 
 #ifdef ESP32
 
