@@ -28,8 +28,8 @@ zum prüfen, ob der NodeMCU sich mit dem wlan verbindet und etwas ausgibt, hilft
 //////////////////////////////////////////////////////
 //Je nach Teilnehmer die Nummer hinter den MQTT_PATH ändern ( bei 3 teilnehmer 0-2)
 ////////////////////////////////////////////////////
-#define MQTT_PATH_COMMAND  "command_channel1"
-#define MQTT_PATH_EARTH_HUMIDITY  "earth_humidity_channel1"
+#define MQTT_PATH_COMMAND  "command_channel2"
+#define MQTT_PATH_EARTH_HUMIDITY  "earth_humidity_channel2"
 
 
 #ifdef ESP8266
@@ -41,7 +41,7 @@ zum prüfen, ob der NodeMCU sich mit dem wlan verbindet und etwas ausgibt, hilft
 #ifdef ESP32
 #include <WiFi.h> //FÜR ESP32
 #define BUILTIN_LED 2 //Für ESP32
-#define PUMP_PIN 4
+#define PUMP_PIN 4//giessen
 #define sensorPin 34
 #define maxTimeToPump 20000000 //in us//ein timer wird beim pumpbefehl gestartet, welcher das pumpen abbricht, fall es diese zeit überschreitet
 #endif
@@ -52,8 +52,6 @@ zum prüfen, ob der NodeMCU sich mit dem wlan verbindet und etwas ausgibt, hilft
 #define TIME_TO_SLEEP  60        /* Time ESP32 will go to sleep (in seconds) */
 RTC_DATA_ATTR int bootCount = 0;
 #endif
-//giessen
-#define PUMP_PIN 4
 
 // Update these with values suitable for your network.
 
@@ -243,7 +241,7 @@ void loop() {
     client.loop();
 
     unsigned long now = millis();
-    if (now - lastMsg > 15000) {
+    if (now - lastMsg > 15000) {//nach aufwachen einen wert --> noch anpassen ohne millis
         lastMsg = now;
         
         int iHum = getHumidity(); //TODO Hum auslesen und als string in MQTT
