@@ -47,7 +47,7 @@ zum prüfen, ob der NodeMCU sich mit dem wlan verbindet und etwas ausgibt, hilft
 #endif
 
 #ifdef DEEPSLEEP
-//DeppSleep
+//DeepSleep
 #define uS_TO_S_FACTOR 1000000ULL  /* Conversion factor for micro seconds to seconds */
 #define TIME_TO_SLEEP  60        /* Time ESP32 will go to sleep (in seconds) */
 RTC_DATA_ATTR int bootCount = 0;
@@ -72,6 +72,7 @@ const char* mqtt_server = "192.168.10.58";
 hw_timer_t* timer = NULL;
 #endif
 
+unsigned long at;
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -103,7 +104,7 @@ int getHumidity() { //TODO Testen und evtl. callibriren
 }
 
 #ifdef DEEPSLEEP
-int sleepTime=0;
+char sleepTime=0;
 void print_wakeup_reason() {
     esp_sleep_wakeup_cause_t wakeup_reason;
 
@@ -155,6 +156,15 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }
     Serial.println();
 
+#ifdef DEBUG
+    // so kann man die einzelnen Stellen der payload ausgeben. Die uebertragung erfolgt in DEC, mittels (char) erfolgt die Umwandlung, siehe Ascii table
+    Serial.println("payload in einzelnen char");
+    Serial.println((char)payload[0]);
+    Serial.println((char)payload[1]);
+    Serial.println((char)payload[2]);
+    Serial.println((char)payload[3]);
+#endif // DEBUG
+
     
 
     if ((char)payload[0] == 'p') //pump befehl        
@@ -169,7 +179,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     if ((char)payload[0] == 'r') //deepSleep
     {
         cStatus = 'r';//status Variable bei Command r ändern (restbefehl)
-        sleepTime = (char)payload[1];
+        sleepTime = payload[1];
     }
 #endif
 
@@ -221,6 +231,9 @@ void setup() {
     /* Repeat the alarm (third parameter = true) */
     timerAlarmWrite(timer, maxTimeToPump, false);
 #endif
+    at = millis();
+    Serial.println("millis");
+    Serial.println(at);
     setup_wifi();
     client.setServer(mqtt_server, 1883);
     client.setCallback(callback);
@@ -251,7 +264,7 @@ void loop() {
     client.loop();
 
     unsigned long now = millis();
-    if (now - lastMsg > 15000) {//nach aufwachen einen wert --> noch anpassen ohne millis
+    if (now - lastMsg > 5000) {//nach aufwachen einen wert --> noch anpassen ohne millis
         lastMsg = now;
         
         int iHum = getHumidity(); //TODO Hum auslesen und als string in MQTT
@@ -259,7 +272,7 @@ void loop() {
         snprintf(msg, MSG_BUFFER_SIZE, "%ld", iHum);
 #ifdef DEBUG
         Serial.print("Debug Hum:");
-        Serial.println(msg);
+        Serial.print(msg);
 #endif // DEBUG
 
         client.publish(MQTT_PATH_EARTH_HUMIDITY, msg);
@@ -298,10 +311,18 @@ void loop() {
            // esp_deep_sleep_start(); //TODO bisher klappt danach das empfangen nicht richtig
 #endif
         }
+
+
+        
+
 #ifdef DEEPSLEEP
         if (cStatus == 'r')
         {
             Serial.println("jetzt wird geschlafen");
+            Serial.println(sleepTime);
+            at = millis();
+            Serial.println("millis");
+            Serial.println(at);            
             esp_deep_sleep(sleepTime);
 
         }
