@@ -23,7 +23,7 @@ zum prüfen, ob der NodeMCU sich mit dem wlan verbindet und etwas ausgibt, hilft
 
 //Bedingte Compilierung zum Debuggen
 #define DEBUG
-//#define DEEPSLEEP //da es noch nicht richtig funktioniert
+#define DEEPSLEEP //da es noch nicht richtig funktioniert
 
 //////////////////////////////////////////////////////
 //Je nach Teilnehmer die Nummer hinter den MQTT_PATH ändern ( bei 3 teilnehmer 0-2)
@@ -295,7 +295,7 @@ void loop() {
 #ifdef ESP32
             timerAlarmDisable(timer);//Schaltet den Timer aus wenn stop befehl von raspPi kommt
 #endif
-            Serial.println("jetzt wird geschlafen");
+            
 #ifdef DEEPSLEEP
            // esp_deep_sleep_start(); //TODO bisher klappt danach das empfangen nicht richtig
 #endif
@@ -303,6 +303,7 @@ void loop() {
 #ifdef DEEPSLEEP
         if (cStatus == 'r')
         {
+            Serial.println("jetzt wird geschlafen");
             esp_deep_sleep(sleepTime);
 
         }
