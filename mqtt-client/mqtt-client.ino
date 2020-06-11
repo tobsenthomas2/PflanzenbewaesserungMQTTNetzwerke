@@ -23,7 +23,7 @@ zum prüfen, ob der NodeMCU sich mit dem wlan verbindet und etwas ausgibt, hilft
 
 //Bedingte Compilierung zum Debuggen
 #define DEBUG
-//#define DEEPSLEEP //da es noch nicht richtig funktioniert
+#define DEEPSLEEP //da es noch nicht richtig funktioniert
 
 //////////////////////////////////////////////////////
 //Je nach Teilnehmer die Nummer hinter den MQTT_PATH ändern ( bei 3 teilnehmer 0-2)
@@ -103,6 +103,7 @@ int getHumidity() { //TODO Testen und evtl. callibriren
 }
 
 #ifdef DEEPSLEEP
+int sleepTime=0;
 void print_wakeup_reason() {
     esp_sleep_wakeup_cause_t wakeup_reason;
 
@@ -143,6 +144,8 @@ void setup_wifi() {
     Serial.println(WiFi.localIP());
 }
 
+
+
 void callback(char* topic, byte* payload, unsigned int length) {
     Serial.print("Message arrived [");
     Serial.print(topic);
@@ -160,8 +163,15 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }
     if ((char)payload[0] == 's') //pump befehl
     {
-        cStatus = 's';//status Variable bei Command p ändern (Pumpbefehl)
+        cStatus = 's';//status Variable bei Command s ändern (stopbefehl)
     }
+#ifdef DEEPSLEEP
+    if ((char)payload[0] == 'r') //deepSleep
+    {
+        cStatus = 'r';//status Variable bei Command r ändern (restbefehl)
+        sleepTime = (char)payload[1];
+    }
+#endif
 
 }
 
@@ -283,11 +293,19 @@ void loop() {
 #ifdef ESP32
             timerAlarmDisable(timer);//Schaltet den Timer aus wenn stop befehl von raspPi kommt
 #endif
-            Serial.println("jetzt wird geschlafen");
+            
 #ifdef DEEPSLEEP
            // esp_deep_sleep_start(); //TODO bisher klappt danach das empfangen nicht richtig
 #endif
         }
+#ifdef DEEPSLEEP
+        if (cStatus == 'r')
+        {
+            Serial.println("jetzt wird geschlafen");
+            esp_deep_sleep(sleepTime);
+
+        }
+#endif
         cStatus = 0;
 
     }

@@ -16,7 +16,6 @@ import csv
 
 
 # Don't forget to change the variables for the MQTT broker!
-#mqtt_topic = [("earth_humidity_channel",0),("command_channel",0)]
 #mqtt_broker_ip = "192.168.10.58"
 mqtt_broker_ip = "192.168.178.57"
 
@@ -24,13 +23,16 @@ mqtt_broker_ip = "192.168.178.57"
 client = mqtt.Client()
 
 #Import der member-Einstellung ueber die Datei input.csv
-
+durations=[]
 with open("input.csv", "r") as f_input:
 	csv_input = csv.DictReader(f_input)
 	members=sum(1 for row in f_input)-1 #ermittelt wie viele Zeilen es gibt(Kopfzeile ausgenommen) = Anzahl MCUs
 	print("Anzahl Teilnehmer: ", members)
 	f_input.seek(0) #Pointer an File-Beginn setzen
-	
+	durations=[]
+	frequencys=[]
+	humMins=[]
+	names=[]
 	for row in csv_input:
 		id = row['$id']
 		name = row['name']
@@ -44,10 +46,14 @@ with open("input.csv", "r") as f_input:
 		exec "humMin%s=humMin" % (id)
 
 		print(id, name, frequency, duration,humMin)
-
-
-
-
+		durations=durations+[duration]
+		frequencys=frequencys+[frequency]
+		humMins=humMins+[humMin]
+		names=names+[name]
+print(durations)
+print(frequencys)
+print(humMins)
+print (names)
 # x teilnehmer koennen mit dieser for unterschieden werden
 #es wird nach jeder topic eine Zahl geschrieben
 
@@ -99,16 +105,12 @@ def on_connect(client, userdata, flags, rc):
 	print ("Connected!"), str(rc)
 	
 	# Once the client has connected to the broker, subscribe to the topic
-	#client.subscribe(mqtt_topic)
 	
-   # client.subscribe("earth_humidity_channel0")
-   # print ("subscribed")
 	p=0
 	while p<members: 
 		client.subscribe(MQTT_PATH_COMMAND[p])
-		print ("subscribed")
 		client.subscribe(MQTT_PATH_EARTH_HUMIDITY[p])
-		print ("subscribed")
+		print ("subscribed to all chans")
 		p+=1
 	
 def on_message(client, userdata, msg):
@@ -133,16 +135,18 @@ def on_message(client, userdata, msg):
 
 			if (humidity < humidityMin):
 				print("zu trocken")
-				#starttime = now
-				#stoptime = starttime + datetime.timedelta(seconds=10)
 				print(MQTT_PATH_COMMAND)
-				client.publish(MQTT_PATH_COMMAND[n],"p")
-				print("Pumpe gestartet")
-				#print(starttime, stoptime)
-				print("Before the sleep statement")
-				time.sleep(5)
+				client.publish(MQTT_PATH_COMMAND[n],"p")#pumpbefehl
+
+				print("Pumpe gestartet fuer ")
+				print(durations[n])
+				time.sleep(int(durations[n]))#die richtige pumpdauer aus dem config file inputcsv
 				print("After the sleep statement")
-				client.publish(MQTT_PATH_COMMAND[n],"s")
+				client.publish(MQTT_PATH_COMMAND[n],"s")#stopbefehl
+				client.publish(MQTT_PATH_COMMAND[n],"r"+frequencys[n])#rest befehl
+				#client.publish(MQTT_PATH_COMMAND[n],frequencys[n])#rest dauer in stunden(wie lange keine messung vorgenommen wird)
+				print(names[n]+" wurde gegossen")
+				print("Pumpe gestoppt")
 		n+=1
 
 
