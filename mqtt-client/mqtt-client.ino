@@ -105,6 +105,7 @@ int getHumidity() { //TODO Testen und evtl. callibriren
 }
 
 #ifdef DEEPSLEEP
+int sleepTime;
 void print_wakeup_reason() {
     esp_sleep_wakeup_cause_t wakeup_reason;
 
@@ -145,6 +146,8 @@ void setup_wifi() {
     Serial.println(WiFi.localIP());
 }
 
+
+
 void callback(char* topic, byte* payload, unsigned int length) {
     Serial.print("Message arrived [");
     Serial.print(topic);
@@ -162,8 +165,15 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }
     if ((char)payload[0] == 's') //pump befehl
     {
-        cStatus = 's';//status Variable bei Command p ändern (Pumpbefehl)
+        cStatus = 's';//status Variable bei Command s ändern (stopbefehl)
     }
+#ifdef DEEPSLEEP
+    if ((char)payload[0] == 'r') //deepSleep
+    {
+        cStatus = 'r';//status Variable bei Command r ändern (restbefehl)
+        sleepTime = (char)payload[1];
+    }
+#endif
 
 }
 
@@ -290,6 +300,13 @@ void loop() {
            // esp_deep_sleep_start(); //TODO bisher klappt danach das empfangen nicht richtig
 #endif
         }
+#ifdef DEEPSLEEP
+        if (cStatus == 'r')
+        {
+            esp_deep_sleep(sleepTime);
+
+        }
+#endif
         cStatus = 0;
 
     }
