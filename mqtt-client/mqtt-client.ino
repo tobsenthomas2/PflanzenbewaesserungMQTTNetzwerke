@@ -1,21 +1,8 @@
 
-
-/* Simon:
-verwendete Bibliothek: PubSubClient  die Bibliothek hab ich über die Arduino-IDE installiert.
-Anpassen muss man:
-    wlan ssid und passwort
-    IP das mqtt Server
-das verwendete topic lautet " /outTopic " (inwischen andere Topics); der Befehl auf dem Raspi: mosquitto_sub -d -t outTopic
-zum prüfen, ob der NodeMCU sich mit dem wlan verbindet und etwas ausgibt, hilft der serielle Monitor
-
-
-*/
 #include <Arduino.h>
 
 #include <PubSubClient.h>
-//ADC
-//#include "driver/adc.h"
-//#include "esp_adc_cal.h"
+
 
 //Welchen Chip benutzt du?
 #define ESP32
@@ -23,7 +10,7 @@ zum prüfen, ob der NodeMCU sich mit dem wlan verbindet und etwas ausgibt, hilft
 
 //Bedingte Compilierung zum Debuggen
 #define DEBUG
-#define DEEPSLEEP //da es noch nicht richtig funktioniert
+#define DEEPSLEEP 
 
 //////////////////////////////////////////////////////
 //Je nach Teilnehmer die Nummer hinter den MQTT_PATH ändern ( bei 3 teilnehmer 0-2)
@@ -47,15 +34,10 @@ zum prüfen, ob der NodeMCU sich mit dem wlan verbindet und etwas ausgibt, hilft
 #endif
 
 #ifdef DEEPSLEEP
-//DeepSleep
-#define uS_TO_S_FACTOR 1000000ULL  /* Conversion factor for micro seconds to seconds */
-#define TIME_TO_SLEEP  60        /* Time ESP32 will go to sleep (in seconds) */
-RTC_DATA_ATTR int bootCount = 0;
+RTC_DATA_ATTR int bootCount = 0; //Zaehler fuer erfolge Neustarts durch DeepSleep
 #endif
 
 // Update these with values suitable for your network.
-
-
 
 const char* ssid = "wlankuhl";
 const char* password = "GreenLineNew3";
@@ -67,12 +49,9 @@ const char* mqtt_server = "192.168.10.58";
 //const char* mqtt_server = "192.168.178.57";
 
 #ifdef ESP32
-
 //Timer
 hw_timer_t* timer = NULL;
 #endif
-
-unsigned long at;
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -83,8 +62,6 @@ char msg[MSG_BUFFER_SIZE];
 char cStatus = 's';//anfangswertStop
 
 #ifdef ESP32
-//Funktioniert am ESP8266 leider nicht! -> stattdessen mit millis() arbeiten, läuft überall
-//Timer um pumpen abzubrehcne
 void IRAM_ATTR onTimer() {
 #ifdef DEBUG
     Serial.println("TimInt");
@@ -92,6 +69,7 @@ void IRAM_ATTR onTimer() {
     cStatus = 's'; //stopstatus der variable
 }
 #endif
+
 //Funktion um Erdfeuchte zu messen
 //Sensor kalibirieren: siehe hier: https://wiki.dfrobot.com/Capacitive_Soil_Moisture_Sensor_SKU_SEN0193
 int getHumidity() { //TODO Testen und evtl. callibriren
@@ -104,7 +82,7 @@ int getHumidity() { //TODO Testen und evtl. callibriren
 }
 
 #ifdef DEEPSLEEP
-char sleepTime=0;
+int sleepTime=0;
 void print_wakeup_reason() {
     esp_sleep_wakeup_cause_t wakeup_reason;
 
@@ -121,6 +99,7 @@ void print_wakeup_reason() {
     }
 }
 #endif
+
 void setup_wifi() {
 
     delay(10);
@@ -141,10 +120,9 @@ void setup_wifi() {
 
     Serial.println("");
     Serial.println("WiFi connected");
-    Serial.println("IP address: ");
+    Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
 }
-
 
 
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -155,23 +133,12 @@ void callback(char* topic, byte* payload, unsigned int length) {
         Serial.print((char)payload[i]);
     }
     Serial.println();
-
-#ifdef DEBUG
-    // so kann man die einzelnen Stellen der payload ausgeben. Die uebertragung erfolgt in DEC, mittels (char) erfolgt die Umwandlung, siehe Ascii table
-    Serial.println("payload in einzelnen char");
-    Serial.println((char)payload[0]);
-    Serial.println((char)payload[1]);
-    Serial.println((char)payload[2]);
-    Serial.println((char)payload[3]);
-#endif // DEBUG
-
-    
-
+  
     if ((char)payload[0] == 'p') //pump befehl        
     {
         cStatus = 'p';//status Variable bei Command p ändern (Pumpbefehl)
     }
-    if ((char)payload[0] == 's') //pump befehl
+    if ((char)payload[0] == 's') //pump befehl stop
     {
         cStatus = 's';//status Variable bei Command s ändern (stopbefehl)
     }
@@ -179,10 +146,10 @@ void callback(char* topic, byte* payload, unsigned int length) {
     if ((char)payload[0] == 'r') //deepSleep
     {
         cStatus = 'r';//status Variable bei Command r ändern (restbefehl)
-        sleepTime = payload[1];
+        char c = payload[1]; 
+        sleepTime = c - '0'; //Wandelt ASCII-Wert um und speicher den Wert in int sleepTimer
     }
 #endif
-
 }
 
 void reconnect() {
@@ -231,9 +198,7 @@ void setup() {
     /* Repeat the alarm (third parameter = true) */
     timerAlarmWrite(timer, maxTimeToPump, false);
 #endif
-    at = millis();
-    Serial.println("millis");
-    Serial.println(at);
+  
     setup_wifi();
     client.setServer(mqtt_server, 1883);
     client.setCallback(callback);
@@ -244,15 +209,6 @@ void setup() {
 
     //Print the wakeup reason for ESP32
     print_wakeup_reason();
-    esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
-    Serial.println("Setup ESP32 to sleep for every " + String(TIME_TO_SLEEP) +
-        " Seconds");
-
-
-   // Serial.println("Going to sleep now");
-    //Serial.flush();
-
-    //esp_deep_sleep_start();
 #endif
 }
 
@@ -264,7 +220,7 @@ void loop() {
     client.loop();
 
     unsigned long now = millis();
-    if (now - lastMsg > 5000) {//nach aufwachen einen wert --> noch anpassen ohne millis
+    if (now - lastMsg > 5000) {  //wenn wach, alle 5000 ms einen Messwert senden
         lastMsg = now;
         
         int iHum = getHumidity(); //TODO Hum auslesen und als string in MQTT
@@ -276,13 +232,12 @@ void loop() {
 #endif // DEBUG
 
         client.publish(MQTT_PATH_EARTH_HUMIDITY, msg);
-        Serial.print("published in\n");
-        Serial.print(MQTT_PATH_EARTH_HUMIDITY);
+        Serial.print(" published in ");
+        Serial.println(MQTT_PATH_EARTH_HUMIDITY);
         delay(5000);
+
         if (cStatus == 'p') //pumpen
-        {
-            //TODO wird das relais high oder low gesteuert?
-            
+        {           
 #ifdef DEBUG
             Serial.println("Pumpe an");
 #endif
@@ -292,8 +247,6 @@ void loop() {
 #ifdef ESP32
             timerAlarmEnable(timer);//Startet Timer um unendliches pumpen zu vermeiden, falls kein stopp befehl vom raspberry kommt 
 #endif
-          //esp_deep_sleep_start();
-       
         }
 
         if (cStatus == 's')//statusvar auf stop
@@ -311,19 +264,13 @@ void loop() {
            // esp_deep_sleep_start(); //TODO bisher klappt danach das empfangen nicht richtig
 #endif
         }
-
-
-        
-
+             
 #ifdef DEEPSLEEP
-        if (cStatus == 'r')
+        if (cStatus == 'r')//status schlafen mit gegebener Zeit
         {
-            Serial.println("jetzt wird geschlafen");
-            Serial.println(sleepTime);
-            at = millis();
-            Serial.println("millis");
-            Serial.println(at);            
-            esp_deep_sleep(sleepTime);
+            Serial.print("jetzt wird geschlafen: ");
+            Serial.println(sleepTime*1000000);        
+            esp_deep_sleep(sleepTime*1000000);  //wird in us angegeben
 
         }
 #endif
