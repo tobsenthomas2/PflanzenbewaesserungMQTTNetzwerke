@@ -40,7 +40,7 @@ RTC_DATA_ATTR int bootCount = 0; //Zaehler fuer erfolge Neustarts durch DeepSlee
 // Update these with values suitable for your network.
 
 const char* ssid = "wlankuhl";
-const char* password = "GreenLineNew3";
+const char* password = "leer";
 const char* mqtt_server = "192.168.10.58";
 
 
