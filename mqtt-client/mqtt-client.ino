@@ -15,8 +15,8 @@
 //////////////////////////////////////////////////////
 //Je nach Teilnehmer die Nummer hinter den MQTT_PATH ändern ( bei 3 teilnehmer 0-2)
 ////////////////////////////////////////////////////
-#define MQTT_PATH_COMMAND  "command_channel2"
-#define MQTT_PATH_EARTH_HUMIDITY  "earth_humidity_channel2"
+#define MQTT_PATH_COMMAND  "command_channel0"
+#define MQTT_PATH_EARTH_HUMIDITY  "earth_humidity_channel0"
 
 
 #ifdef ESP8266
@@ -39,14 +39,14 @@ RTC_DATA_ATTR int bootCount = 0; //Zaehler fuer erfolge Neustarts durch DeepSlee
 
 // Update these with values suitable for your network.
 
-const char* ssid = "wlankuhl";
-const char* password = "leer";
-const char* mqtt_server = "192.168.10.58";
+//const char* ssid = "wlankuhl";
+//const char* password = "leer";
+//const char* mqtt_server = "192.168.10.58";
 
 
-//const char* ssid = "o2-WLAN80";
-//const char* password = "49YMT8F7E84L8673";//4 3
-//const char* mqtt_server = "192.168.178.57";
+const char* ssid = "o2-WLAN80";
+const char* password = "49YMT8F7E84L8673";//4 3
+const char* mqtt_server = "192.168.178.57";
 
 #ifdef ESP32
 //Timer

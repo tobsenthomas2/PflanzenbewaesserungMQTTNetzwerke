@@ -22,7 +22,7 @@ mqtt_broker_ip = "192.168.178.57"
 
 client = mqtt.Client()
 
-#Import der member-Einstellung ueber die Datei input.csv
+#Import der member-Einstellung ueber die Datei input.csv 
 durations=[]
 with open("input.csv", "r") as f_input:
 	csv_input = csv.DictReader(f_input)
@@ -133,7 +133,7 @@ def on_message(client, userdata, msg):
 			print("humidity was published")
 			print(humidity)
 
-			if (humidity < humidityMin):
+			if (humidity < humMins[n]):
 				print("zu trocken")
 				print(MQTT_PATH_COMMAND)
 				client.publish(MQTT_PATH_COMMAND[n],"p")#pumpbefehl
