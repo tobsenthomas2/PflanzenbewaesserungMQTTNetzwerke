@@ -19,7 +19,7 @@ import csv
 #mqtt_broker_ip = "192.168.10.58"
 mqtt_broker_ip = "192.168.178.57"
 
-
+command=0
 client = mqtt.Client()
 
 #Import der member-Einstellung ueber die Datei input.csv 
@@ -57,10 +57,12 @@ print (names)
 # x teilnehmer koennen mit dieser for unterschieden werden
 #es wird nach jeder topic eine Zahl geschrieben
 
-#members=2    #hier muss die richtige Anzahl an Teilnemhern -1 stehen
-
-humidityMin=840#ab diesem Sensor wert wird gepumpt
-
+counter=[0]
+i=0
+while i<members:
+			counter=counter+[0] 
+			print (counter)
+			i+=1
 MQTT_PATH_COMMAND=["command_channel"]
 MQTT_PATH_EARTH_HUMIDITY=["earth_humidity_channel"]
 
@@ -108,10 +110,11 @@ def on_connect(client, userdata, flags, rc):
 	
 	p=0
 	while p<members: 
-		client.subscribe(MQTT_PATH_COMMAND[p])
+		#client.subscribe(MQTT_PATH_COMMAND[p])
 		client.subscribe(MQTT_PATH_EARTH_HUMIDITY[p])
-		print ("subscribed to all chans")
+		
 		p+=1
+	print ("subscribed to all chans")
 	
 def on_message(client, userdata, msg):
 	# This function is called everytime the topic is published to.
@@ -122,32 +125,57 @@ def on_message(client, userdata, msg):
 	data = str(msg.payload)
 	print(data)    
 	
-	#now = datetime.datetime.now()    
+	#now = datetime.datetime.now() 
+	p=0
 	n=0
-	while n<members:
-		if msg.topic==MQTT_PATH_EARTH_HUMIDITY[n]:
-			print ("\n")
-			print(MQTT_PATH_EARTH_HUMIDITY[n])
-			print(" wird aufgerufen")
-			humidity = int(msg.payload)
-			print("humidity was published")
-			print(humidity)
+	while p<members:
+		if (msg.topic==MQTT_PATH_EARTH_HUMIDITY[p]):
+			n=p
+		p+=1
+	
+	
+	#print(n)
+	if msg.topic==MQTT_PATH_EARTH_HUMIDITY[n]:
+		print ("\n")
+		print(MQTT_PATH_EARTH_HUMIDITY[n])
+		print(" wird aufgerufen")
+		humidity = int(msg.payload)
+		print("humidity was published")
+		print(humidity)
+		if (humidity=="y"):
+		
+			global command
+			global q
+			command="y"
+			
+			
+			
+		elif (humidity > int( humMins[n])):
+			print("zu trocken")
+			print (humidity)
+			print(">")
+			print(int(humMins[n]))
+			#print(MQTT_PATH_COMMAND)
+			
+			global command
+			global q
+			command="p"
+			counter[n]=0
+			print(command)
+		else:
+			
+			counter[n]=counter[n]+1
+			print(counter[n])
+			if (counter[n]==5): #wenn 5 Werte gesendet wurden und noch genug feuchtigkeit, dann schlafen schicken
+				global commandTwo
+				global activeMember
+				commandTwo="s"
+				counter[n]=0
+				activeMember=n
 
-			if (humidity < humMins[n]):
-				print("zu trocken")
-				print(MQTT_PATH_COMMAND)
-				client.publish(MQTT_PATH_COMMAND[n],"p")#pumpbefehl
 
-				print("Pumpe gestartet fuer ")
-				print(durations[n])
-				time.sleep(int(durations[n]))#die richtige pumpdauer aus dem config file inputcsv
-				print("After the sleep statement")
-				client.publish(MQTT_PATH_COMMAND[n],"s")#stopbefehl
-				client.publish(MQTT_PATH_COMMAND[n],"r"+frequencys[n])#rest befehl
-				#client.publish(MQTT_PATH_COMMAND[n],frequencys[n])#rest dauer in stunden(wie lange keine messung vorgenommen wird)
-				print(names[n]+" wurde gegossen")
-				print("Pumpe gestoppt")
-		n+=1
+	q=n		
+	n+=1
 
 
 	
@@ -165,7 +193,55 @@ client.on_message = on_message
 # 1883 is the listener port that the MQTT broker is using
 client.connect(mqtt_broker_ip, 1883)
 
+global command
+global activeMember
+global commandTwo
+commandTwo=0
+command=0
+activeMember="a"
 # Once we have told the client to connect, let the client object run itself
-client.loop_forever()
+print("vor loop start")
+client.loop_start()
+print("loop gestartet ab in die while")
+
+while 1:
+	global command
+	global activeMember
+	global commandTwo
+	if(command=="y"):#benachrichtigung, dass der NodeMCU schlaeft --> noch gesendetet Befehle werden geloescht
+		wait=client.publish(MQTT_PATH_COMMAND[activeMember],"0")#leerer Befehl
+		print("esp schlaeft --> letzten befehl ueberschreiben")
+		print("warten bis published")
+		wait.wait_for_publish()
+
+	if(commandTwo=="s"):
+		global activeMember
+		global commandTwo
+		wait=client.publish(MQTT_PATH_COMMAND[activeMember],"s")#stopbefehl
+		print("stopbefehl")
+		print("warten bis published")
+		wait.wait_for_publish()
+		client.publish(MQTT_PATH_COMMAND[activeMember],"r"+frequencys[activeMember])#rest befehl
+		print("restbefehl")
+		print(names[activeMember]+" wurde gegossen")
+		print("Pumpe gestoppt")
+		commandTwo=0
+		#client.loop_start()
+	if(command=="p"):
+		global command
+		global activeMember
+		global commandTwo
+		print("command zu p")
+		waitTest=client.publish(MQTT_PATH_COMMAND[q],"p",qos=2)#pumpbefehl
+		command=0
+		commandTwo="s"
+		activeMember=q
+		print("warten auf publish")
+		waitTest.wait_for_publish()
+		print("Pumpe gestartet fuer ")
+		print(durations[activeMember])
+		time.sleep(int(durations[activeMember]))#die richtige pumpdauer aus dem config file inputcsv
+		
+
 client.disconnect()
 
