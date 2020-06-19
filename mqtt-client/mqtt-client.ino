@@ -18,8 +18,8 @@
 //////////////////////////////////////////////////////
 //Je nach Teilnehmer die Nummer hinter den MQTT_PATH ändern ( bei 3 teilnehmer 0-2)
 ////////////////////////////////////////////////////
-#define MQTT_PATH_COMMAND  "command_channel2"
-#define MQTT_PATH_EARTH_HUMIDITY  "earth_humidity_channel2"
+#define MQTT_PATH_COMMAND  "command_channel0"
+#define MQTT_PATH_EARTH_HUMIDITY  "earth_humidity_channel0"
 
 
 #ifdef ESP8266
@@ -111,6 +111,8 @@ void print_wakeup_reason() {
     }
 }
 #endif
+//nach dem pumpbefehl wird eine Timer gestartet um nach 21 Sekunden eine Notabschaltung der Pumpe zu bewirken
+void EmergencyTimerStart(void);
 
 void setup_wifi() {
 
@@ -270,8 +272,7 @@ void loop() {
         digitalWrite(BUILTIN_LED, HIGH);//zum veranschaulichen
         Serial.println("Timer Starten");
 #ifdef ESP32
-      //  timerAlarmEnable(timer);//Startet Timer um unendliches pumpen zu vermeiden, falls kein stopp befehl vom raspberry kommt 
-        timerStart(timer);
+        EmergencyTimerStart();
 #endif
     }
 
@@ -289,13 +290,9 @@ void loop() {
 #endif
         digitalWrite(BUILTIN_LED, LOW);
 #ifdef ESP32
-        //timerAlarmDisable(timer);//Schaltet den Timer aus wenn stop befehl von raspPi kommt
-        timerStop(timer);
+        timerAlarmDisable(timer);//Schaltet den Timer aus wenn stop befehl von raspPi kommt
 #endif
 
-#ifdef DEEPSLEEP
-           // esp_deep_sleep_start(); //TODO bisher klappt danach das empfangen nicht richtig
-#endif
     }
 
 #ifdef DEEPSLEEP
@@ -313,3 +310,13 @@ void loop() {
 
 }
 
+
+
+void EmergencyTimerStart(void)
+{
+    timer = timerBegin(0, 80, true);
+    timerAttachInterrupt(timer, &onTimer, true);
+    timerAlarmWrite(timer, 21000000, false);
+    timerAlarmEnable(timer);
+
+}
