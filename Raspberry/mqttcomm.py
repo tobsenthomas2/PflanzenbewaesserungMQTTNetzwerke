@@ -15,7 +15,7 @@ import time
 import csv
 
 
-# Don't forget to change the variables for the MQTT broker!
+# Einstellen MQTT broker! (IP-Adresse des Raspberrys
 #mqtt_broker_ip = "192.168.10.58"
 mqtt_broker_ip = "192.168.178.57"
 
@@ -45,6 +45,7 @@ with open("input.csv", "r") as f_input:
 		exec "duration%s=duration" % (id)
 		exec "humMin%s=humMin" % (id)
 
+		#erstellt Eine Liste für die bessere Weiterverarbeitung
 		print(id, name, frequency, duration,humMin)
 		durations=durations+[duration]
 		frequencys=frequencys+[frequency]
@@ -59,13 +60,14 @@ print (names)
 
 counter=[0]
 i=0
+#nach 5 Messungen wird der esp32 schlafen gelegt
 while i<members:
 			counter=counter+[0] 
 			print (counter)
 			i+=1
 MQTT_PATH_COMMAND=["command_channel"]
 MQTT_PATH_EARTH_HUMIDITY=["earth_humidity_channel"]
-
+#gibt die richten topics zurück
 def getMemberTopics(topic):
 	i=1
 	if topic==["command_channel"]:
@@ -116,6 +118,8 @@ def on_connect(client, userdata, flags, rc):
 		p+=1
 	print ("subscribed to all chans")
 	
+
+	#wird aufgerufen wenn eine neue Nachricht in einer subscripten Topic ist
 def on_message(client, userdata, msg):
 	# This function is called everytime the topic is published to.
 	# If you want to check each message, and do something depending on
@@ -124,8 +128,6 @@ def on_message(client, userdata, msg):
 	print ("Topic: ", msg.topic + "\nMessage: " + str(msg.payload))   
 	data = str(msg.payload)
 	print(data)    
-	
-	#now = datetime.datetime.now() 
 	p=0
 	n=0
 	while p<members:
@@ -146,7 +148,7 @@ def on_message(client, userdata, msg):
 		
 			global command
 			global q
-			command="y"
+			command="y"#esp32 ist schlafen gegangen
 			
 			
 			
@@ -155,8 +157,6 @@ def on_message(client, userdata, msg):
 			print (humidity)
 			print(">")
 			print(int(humMins[n]))
-			#print(MQTT_PATH_COMMAND)
-			
 			global command
 			global q
 			command="p"
@@ -179,7 +179,6 @@ def on_message(client, userdata, msg):
 
 
 	
-   
 
 	# The message itself is stored in the msg variable
 	# and details about who sent it are stored in userdata
@@ -204,6 +203,7 @@ print("vor loop start")
 client.loop_start()
 print("loop gestartet ab in die while")
 
+#hier werden die commandos, welche im callback in die variablen gespeichert wurden gepublished
 while 1:
 	global command
 	global activeMember

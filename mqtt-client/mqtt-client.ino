@@ -11,7 +11,8 @@ p : pumpen
 s : Pumpe stoppen
 r : Rest (DeepSleep) mit nachfolgender Dauer
 
-
+Ersteller: Simon Kuhlmann, Tobias Thomas
+Datum: 20.06.2020
 
 
 */
