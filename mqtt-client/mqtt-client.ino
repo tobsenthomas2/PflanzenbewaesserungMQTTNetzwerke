@@ -1,4 +1,23 @@
 
+/*
+Dieses Programm wurde im Rahmen des Moduls "Netzwerke" geschrieben. 
+Das Programm ist Teil einer Pflanzenbewässerungsanlage.
+Der ESP32 ließt über Pin 34 den Spannungswert eines Feuchtesensors der in der Pflanzenerde steckt.
+An Pin 4 ist eine Pumpe bzw. das Relais ür die Pumpe angeschlossen
+Alle 15 Sekunden wird der aktuelle Sensorwert in die entsprechende Topic geschickt, wo sie von einem Raspberry ausgewerteet wird 
+es wird ein entsprechender Befehl zurück gesendet.
+Mögliche Befehle:
+p : pumpen
+s : Pumpe stoppen
+r : Rest (DeepSleep) mit nachfolgender Dauer
+
+Ersteller: Simon Kuhlmann, Tobias Thomas
+Datum: 20.06.2020
+
+
+*/
+
+
 #include <Arduino.h>
 
 #include <PubSubClient.h>
@@ -6,7 +25,10 @@
 
 //Welchen Chip benutzt du?
 #define ESP32
-//#define ESP8266
+//#define ESP8266//wurde nicht mehr gewartet sollte aber funktionieren;evtl. Timer auskommentieren
+
+//Wie wird das Relais geschaltet
+//#define LowIstAus//Sonst wird high aus sein
 
 //Bedingte Compilierung zum Debuggen
 #define DEBUG
@@ -15,9 +37,15 @@
 //////////////////////////////////////////////////////
 //Je nach Teilnehmer die Nummer hinter den MQTT_PATH ändern ( bei 3 teilnehmer 0-2)
 ////////////////////////////////////////////////////
-#define MQTT_PATH_COMMAND  "command_channel2"
-#define MQTT_PATH_EARTH_HUMIDITY  "earth_humidity_channel2"
+#define MQTT_PATH_COMMAND  "command_channel0"
+#define MQTT_PATH_EARTH_HUMIDITY  "earth_humidity_channel0"
 
+//#define MQTT_PATH_COMMAND  "command_channel1"
+//#define MQTT_PATH_EARTH_HUMIDITY  "earth_humidity_channel1"
+
+
+//#define MQTT_PATH_COMMAND  "command_channel2"
+//#define MQTT_PATH_EARTH_HUMIDITY  "earth_humidity_channel2"
 
 #ifdef ESP8266
 #include <ESP8266WiFi.h> //Für ESP8266
@@ -27,26 +55,28 @@
 
 #ifdef ESP32
 #include <WiFi.h> //FÜR ESP32
-#define BUILTIN_LED 2 //Für ESP32
+#define BUILTIN_LED 2 //Für ESP32 mit verbauter UserLED
 #define PUMP_PIN 4//giessen
-#define sensorPin 34
-#define maxTimeToPump 20000000 //in us//ein timer wird beim pumpbefehl gestartet, welcher das pumpen abbricht, fall es diese zeit überschreitet
+#define sensorPin 34//FeuchteSensor
+#define maxTimeToPump 30000000 //in us//ein timer wird beim pumpbefehl gestartet, welcher das pumpen abbricht, fall es diese zeit überschreitet
 #endif
 
 #ifdef DEEPSLEEP
 RTC_DATA_ATTR int bootCount = 0; //Zaehler fuer erfolge Neustarts durch DeepSleep
 #endif
 
-// Update these with values suitable for your network.
+// Hier Netzwerkdaten Eintragen
 
-const char* ssid = "wlankuhl";
-const char* password = "GreenLineNew3";
-const char* mqtt_server = "192.168.10.58";
+//const char* ssid = "wlankuhl";
+//const char* password = "leer";
+//const char* mqtt_server = "192.168.10.58";
 
 
-//const char* ssid = "o2-WLAN80";
-//const char* password = "49YMT8F7E84L8673";//4 3
-//const char* mqtt_server = "192.168.178.57";
+const char* ssid = "o2-WLAN80";
+const char* password = "49YMT8F7E84L8673";//4 3
+const char* mqtt_server = "192.168.178.57";
+
+
 
 #ifdef ESP32
 //Timer
@@ -61,6 +91,9 @@ char msg[MSG_BUFFER_SIZE];
 
 char cStatus = 's';//anfangswertStop
 
+
+//Timer Interrupt. Der Timer wird beim Pupbefehl gestartet um eine 
+//Notfallabschaltung zu haben falls die Kommunikation abbricht
 #ifdef ESP32
 void IRAM_ATTR onTimer() {
 #ifdef DEBUG
@@ -81,8 +114,10 @@ int getHumidity() { //TODO Testen und evtl. callibriren
     return Hum;
 }
 
+
+//gibt den Grund an warum der DeepSleep unterbrochen wurde
 #ifdef DEEPSLEEP
-int sleepTime=0;
+int sleepTime = 0;
 void print_wakeup_reason() {
     esp_sleep_wakeup_cause_t wakeup_reason;
 
@@ -100,6 +135,12 @@ void print_wakeup_reason() {
 }
 #endif
 
+//nach dem pumpbefehl wird eine Timer gestartet um nach maxTimeToPump Sekunden
+//eine Notabschaltung der Pumpe zu bewirken
+void EmergencyTimerStart(void);
+
+
+//Stellt Wlan verbindung her
 void setup_wifi() {
 
     delay(10);
@@ -108,12 +149,18 @@ void setup_wifi() {
     Serial.print("Connecting to ");
     Serial.println(ssid);
 
+
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
-
+    int h = 0;
     while (WiFi.status() != WL_CONNECTED) {
         delay(500);
         Serial.print(".");
+        h++;
+        if (h > 8)
+        {
+            esp_deep_sleep(5);
+        }
     }
 
     randomSeed(micros());
@@ -125,6 +172,7 @@ void setup_wifi() {
 }
 
 
+//wird ausgeführt, falls neue Nachricht in der subscripten Topic vorhanden ist
 void callback(char* topic, byte* payload, unsigned int length) {
     Serial.print("Message arrived [");
     Serial.print(topic);
@@ -133,7 +181,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
         Serial.print((char)payload[i]);
     }
     Serial.println();
-  
+
     if ((char)payload[0] == 'p') //pump befehl        
     {
         cStatus = 'p';//status Variable bei Command p ändern (Pumpbefehl)
@@ -146,12 +194,13 @@ void callback(char* topic, byte* payload, unsigned int length) {
     if ((char)payload[0] == 'r') //deepSleep
     {
         cStatus = 'r';//status Variable bei Command r ändern (restbefehl)
-        char c = payload[1]; 
+        char c = payload[1];
         sleepTime = c - '0'; //Wandelt ASCII-Wert um und speicher den Wert in int sleepTimer
     }
 #endif
 }
 
+//reconnect zum MQTT Broker
 void reconnect() {
     // Loop until we're reconnected
     while (!client.connected()) {
@@ -162,14 +211,7 @@ void reconnect() {
         // Attempt to connect
         if (client.connect(clientId.c_str())) {
             Serial.println("connected");
-            // Once connected, publish an announcement...
-            //client.publish("outTopic", "hello world");
-
-            int iHum = getHumidity(); //TODO Hum auslesen und als string in MQTT
-            snprintf(msg, MSG_BUFFER_SIZE, "%ld", iHum);
-            client.publish(MQTT_PATH_EARTH_HUMIDITY, msg);
-            // ... and resubscribe
-           // client.subscribe("inTopic");
+      
             client.subscribe(MQTT_PATH_COMMAND);
         }
         else {
@@ -185,7 +227,12 @@ void reconnect() {
 
 void setup() {
     pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
-    pinMode(PUMP_PIN, OUTPUT);//Pin Pumpe
+    pinMode(PUMP_PIN, OUTPUT);//Pin 
+#ifdef LowIstAus
+    digitalWrite(PUMP_PIN, LOW);
+#else
+    digitalWrite(PUMP_PIN, HIGH);
+#endif
     Serial.begin(115200);
 #ifdef ESP32
     /* 1 tick take 1/(80MHZ/80) = 1us so we set divider 80 and count up */
@@ -198,7 +245,7 @@ void setup() {
     /* Repeat the alarm (third parameter = true) */
     timerAlarmWrite(timer, maxTimeToPump, false);
 #endif
-  
+
     setup_wifi();
     client.setServer(mqtt_server, 1883);
     client.setCallback(callback);
@@ -220,11 +267,10 @@ void loop() {
     client.loop();
 
     unsigned long now = millis();
-    if (now - lastMsg > 5000) {  //wenn wach, alle 5000 ms einen Messwert senden
+    if (now - lastMsg > 15000) {  //wenn wach, alle 15000 ms einen Messwert senden
         lastMsg = now;
-        
-        int iHum = getHumidity(); //TODO Hum auslesen und als string in MQTT
-        //TODO der adc ist nicht linear. es muss evtl. calibriert werden und evtl. werte mitteln (auch im Pi möglich)
+
+        int iHum = getHumidity(); 
         snprintf(msg, MSG_BUFFER_SIZE, "%ld", iHum);
 #ifdef DEBUG
         Serial.print("Debug Hum:");
@@ -234,48 +280,71 @@ void loop() {
         client.publish(MQTT_PATH_EARTH_HUMIDITY, msg);
         Serial.print(" published in ");
         Serial.println(MQTT_PATH_EARTH_HUMIDITY);
-        delay(5000);
+    }
 
-        if (cStatus == 'p') //pumpen
-        {           
-#ifdef DEBUG
-            Serial.println("Pumpe an");
-#endif
-            digitalWrite(PUMP_PIN, HIGH);
-            digitalWrite(BUILTIN_LED, HIGH);//zum veranschaulichen
-            Serial.println("Timer Starten");
-#ifdef ESP32
-            timerAlarmEnable(timer);//Startet Timer um unendliches pumpen zu vermeiden, falls kein stopp befehl vom raspberry kommt 
-#endif
-        }
-
-        if (cStatus == 's')//statusvar auf stop
-        {
-#ifdef DEBUG
-            Serial.println("Pumpe aus");
-#endif
-            digitalWrite(PUMP_PIN, LOW);
-            digitalWrite(BUILTIN_LED, LOW);
-#ifdef ESP32
-            timerAlarmDisable(timer);//Schaltet den Timer aus wenn stop befehl von raspPi kommt
-#endif
-            
-#ifdef DEEPSLEEP
-           // esp_deep_sleep_start(); //TODO bisher klappt danach das empfangen nicht richtig
-#endif
-        }
-             
-#ifdef DEEPSLEEP
-        if (cStatus == 'r')//status schlafen mit gegebener Zeit
-        {
-            Serial.print("jetzt wird geschlafen: ");
-            Serial.println(sleepTime*1000000);        
-            esp_deep_sleep(sleepTime*1000000);  //wird in us angegeben
-
-        }
-#endif
+    if (cStatus == 'p') //pumpen
+    {
         cStatus = 0;
+#ifdef DEBUG
+        Serial.println("Pumpe an");
+#endif
+
+
+#ifdef LowIstAus
+        digitalWrite(PUMP_PIN, HIGH);
+
+#else
+        digitalWrite(PUMP_PIN, LOW);
+
+#endif
+        digitalWrite(BUILTIN_LED, HIGH);//zum veranschaulichen
+        Serial.println("Timer Starten");
+#ifdef ESP32
+        EmergencyTimerStart();
+#endif
+    }
+
+    if (cStatus == 's')//statusvar auf stop
+    {
+        cStatus = 0;
+#ifdef DEBUG
+        Serial.println("Pumpe aus");
+#endif
+#ifdef LowIstAus
+        digitalWrite(PUMP_PIN, LOW);
+
+#else
+        digitalWrite(PUMP_PIN, HIGH);
+#endif
+        digitalWrite(BUILTIN_LED, LOW);
+#ifdef ESP32
+        timerAlarmDisable(timer);//Schaltet den Timer aus wenn stop befehl von raspPi kommt
+#endif
 
     }
+
+#ifdef DEEPSLEEP
+    if (cStatus == 'r')//status schlafen mit gegebener Zeit
+    {
+        client.publish(MQTT_PATH_EARTH_HUMIDITY, "y");//gibt dem Pi bescheid, dass er schläft und keine Befehle senden soll bis er wieder wach ist
+        Serial.print("jetzt wird geschlafen: ");
+        Serial.println(sleepTime * 1000000);
+        esp_deep_sleep(sleepTime * 1000000);  //wird in us angegeben
+        cStatus = 0;
+    }
+#endif
+    
+
+
 }
 
+
+//Funktion um eine Notfallabschaltung zu Wewährleisten
+void EmergencyTimerStart(void)
+{
+    timer = timerBegin(0, 80, true);
+    timerAttachInterrupt(timer, &onTimer, true);
+    timerAlarmWrite(timer, maxTimeToPump, false);
+    timerAlarmEnable(timer);
+
+}
