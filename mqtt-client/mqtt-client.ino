@@ -28,7 +28,7 @@ Datum: 20.06.2020
 //#define ESP8266//wurde nicht mehr gewartet sollte aber funktionieren;evtl. Timer auskommentieren
 
 //Wie wird das Relais geschaltet
-//#define LowIstAus//Sonst wird high aus sein
+#define LowIstAus//Sonst wird high aus sein
 
 //Bedingte Compilierung zum Debuggen
 #define DEBUG
@@ -37,8 +37,8 @@ Datum: 20.06.2020
 //////////////////////////////////////////////////////
 //Je nach Teilnehmer die Nummer hinter den MQTT_PATH ändern ( bei 3 teilnehmer 0-2)
 ////////////////////////////////////////////////////
-#define MQTT_PATH_COMMAND  "command_channel0"
-#define MQTT_PATH_EARTH_HUMIDITY  "earth_humidity_channel0"
+#define MQTT_PATH_COMMAND  "command_channel2"
+#define MQTT_PATH_EARTH_HUMIDITY  "earth_humidity_channel2"
 
 //#define MQTT_PATH_COMMAND  "command_channel1"
 //#define MQTT_PATH_EARTH_HUMIDITY  "earth_humidity_channel1"
@@ -339,7 +339,7 @@ void loop() {
 }
 
 
-//Funktion um eine Notfallabschaltung zu Wewährleisten
+//Funktion um eine Notfallabschaltung zu Gewährleisten
 void EmergencyTimerStart(void)
 {
     timer = timerBegin(0, 80, true);

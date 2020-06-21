@@ -45,7 +45,7 @@ with open("input.csv", "r") as f_input:
 		exec "duration%s=duration" % (id)
 		exec "humMin%s=humMin" % (id)
 
-		#erstellt Eine Liste für die bessere Weiterverarbeitung
+		#erstellt Eine Liste fuer die bessere Weiterverarbeitung
 		print(id, name, frequency, duration,humMin)
 		durations=durations+[duration]
 		frequencys=frequencys+[frequency]
@@ -67,7 +67,7 @@ while i<members:
 			i+=1
 MQTT_PATH_COMMAND=["command_channel"]
 MQTT_PATH_EARTH_HUMIDITY=["earth_humidity_channel"]
-#gibt die richten topics zurück
+#gibt die richten topics zurueck
 def getMemberTopics(topic):
 	i=1
 	if topic==["command_channel"]:
@@ -232,7 +232,7 @@ while 1:
 		global activeMember
 		global commandTwo
 		print("command zu p")
-		waitTest=client.publish(MQTT_PATH_COMMAND[q],"p",qos=2)#pumpbefehl
+		waitTest=client.publish(MQTT_PATH_COMMAND[q],"p")#pumpbefehl
 		command=0
 		commandTwo="s"
 		activeMember=q
